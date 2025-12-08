@@ -1,1 +1,1 @@
-print('hello world')
+print('无效数据测试')
