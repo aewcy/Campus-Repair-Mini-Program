@@ -1,6 +1,8 @@
 
-import { Order, OrderStatus, User, UserRole } from '../types';
+import { Order, OrderStatus, User, UserRole, ServiceType } from '../types';
 import { MOCK_USERS } from '../constants';
+const BASE: string = (import.meta as any).env?.VITE_API_BASE_URL || '';
+const isRemote = !!BASE;
 
 const DB_KEYS = {
   ORDERS: 'wefix_orders',
@@ -53,20 +55,52 @@ export const getCurrentUser = (): User | null => {
 };
 
 export const getOrders = async (user: User): Promise<Order[]> => {
+  if (isRemote) {
+    const r = await fetch(`${BASE}/orders?userId=${user.id}&role=${user.role}`);
+    if (!r.ok) throw new Error('fetch orders failed');
+    const data = await r.json();
+    return data as Order[];
+  }
   const orders: Order[] = JSON.parse(localStorage.getItem(DB_KEYS.ORDERS) || '[]');
-  
   if (user.role === UserRole.CUSTOMER) {
     return orders.filter(o => o.customerId === user.id).sort((a, b) => b.createdAt - a.createdAt);
   } else if (user.role === UserRole.TECHNICIAN) {
-    // Techs see pending orders (marketplace) AND their own accepted orders
-    return orders.filter(o => 
-      o.status === OrderStatus.PENDING || o.techId === user.id
-    ).sort((a, b) => b.createdAt - a.createdAt);
+    return orders.filter(o => o.status === OrderStatus.PENDING || o.techId === user.id).sort((a, b) => b.createdAt - a.createdAt);
   }
   return [];
 };
 
 export const createOrder = async (orderData: Partial<Order>): Promise<Order> => {
+  if (isRemote) {
+    const now = Date.now();
+    const payload = {
+      customerId: orderData.customerId,
+      customerName: orderData.customerName,
+      customerPhone: orderData.customerPhone,
+      category: orderData.category || '其他',
+      address: orderData.address,
+      description: orderData.description,
+      serviceType: orderData.serviceType
+    };
+    const r = await fetch(`${BASE}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!r.ok) throw new Error('create order failed');
+    const resp = await r.json();
+    const newOrder: Order = {
+      id: resp.id,
+      customerId: orderData.customerId!,
+      customerName: orderData.customerName!,
+      customerPhone: orderData.customerPhone!,
+      category: orderData.category || '其他',
+      address: orderData.address!,
+      description: orderData.description!,
+      serviceType: orderData.serviceType!,
+      status: OrderStatus.PENDING,
+      createdAt: now,
+      updatedAt: now,
+      images: orderData.images || []
+    };
+    return newOrder;
+  }
   const orders: Order[] = JSON.parse(localStorage.getItem(DB_KEYS.ORDERS) || '[]');
   const newOrder: Order = {
     id: `ord_${Date.now()}`,
@@ -82,40 +116,76 @@ export const createOrder = async (orderData: Partial<Order>): Promise<Order> => 
     updatedAt: Date.now(),
     images: orderData.images || []
   };
-  
   orders.unshift(newOrder);
   localStorage.setItem(DB_KEYS.ORDERS, JSON.stringify(orders));
   return newOrder;
 };
 
 export const updateOrderStatus = async (orderId: string, status: OrderStatus, techId?: string, techName?: string): Promise<Order> => {
+  if (isRemote) {
+    const payload = { status, techId, techName };
+    const r = await fetch(`${BASE}/orders/${orderId}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!r.ok) throw new Error('update status failed');
+    const now = Date.now();
+    const stub: Order = {
+      id: orderId,
+      customerId: '',
+      customerName: '',
+      customerPhone: '',
+      category: '',
+      address: '',
+      description: '',
+      serviceType: ServiceType.HOME as any,
+      status,
+      createdAt: now,
+      updatedAt: now,
+      images: [],
+      techId,
+      techName
+    } as unknown as Order;
+    return stub;
+  }
   const orders: Order[] = JSON.parse(localStorage.getItem(DB_KEYS.ORDERS) || '[]');
   const index = orders.findIndex(o => o.id === orderId);
-  
   if (index === -1) throw new Error("Order not found");
-  
   const order = orders[index];
   order.status = status;
   order.updatedAt = Date.now();
-  
   if (techId && status === OrderStatus.ACCEPTED) {
     order.techId = techId;
     order.techName = techName;
   }
-  
   orders[index] = order;
   localStorage.setItem(DB_KEYS.ORDERS, JSON.stringify(orders));
   return order;
 };
 
 export const rateOrder = async (orderId: string, rating: number, comment: string, type: 'CUSTOMER_TO_TECH' | 'TECH_TO_CUSTOMER'): Promise<Order> => {
+  if (isRemote) {
+    const payload = { rating, comment, type };
+    const r = await fetch(`${BASE}/orders/${orderId}/rate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    if (!r.ok) throw new Error('rate failed');
+    const now = Date.now();
+    const stub: Order = {
+      id: orderId,
+      customerId: '',
+      customerName: '',
+      customerPhone: '',
+      category: '',
+      address: '',
+      description: '',
+      serviceType: ServiceType.HOME as any,
+      status: OrderStatus.COMPLETED,
+      createdAt: now,
+      updatedAt: now,
+      images: []
+    } as unknown as Order;
+    return stub;
+  }
   const orders: Order[] = JSON.parse(localStorage.getItem(DB_KEYS.ORDERS) || '[]');
   const index = orders.findIndex(o => o.id === orderId);
-  
   if (index === -1) throw new Error("Order not found");
-  
   const order = orders[index];
-  
   if (type === 'CUSTOMER_TO_TECH') {
     order.techRating = rating;
     order.customerComment = comment;
@@ -123,7 +193,6 @@ export const rateOrder = async (orderId: string, rating: number, comment: string
     order.customerRating = rating;
     order.techComment = comment;
   }
-  
   orders[index] = order;
   localStorage.setItem(DB_KEYS.ORDERS, JSON.stringify(orders));
   return order;

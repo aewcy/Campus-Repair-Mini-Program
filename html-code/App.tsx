@@ -120,10 +120,11 @@ const App = () => {
     try {
       const techId = currentUser.role === UserRole.TECHNICIAN ? currentUser.id : selectedOrder.techId;
       const techName = currentUser.role === UserRole.TECHNICIAN ? currentUser.name : selectedOrder.techName;
-      
-      const updated = await updateOrderStatus(selectedOrder.id, status, techId, techName);
-      setSelectedOrder(updated);
-      await loadOrders(currentUser);
+      await updateOrderStatus(selectedOrder.id, status, techId, techName);
+      const data = await getOrders(currentUser);
+      setOrders(data);
+      const next = data.find(o => o.id === selectedOrder.id) || null;
+      setSelectedOrder(next);
     } finally {
       setIsLoading(false);
     }
@@ -134,9 +135,11 @@ const App = () => {
     setIsLoading(true);
     try {
       const type = currentUser.role === UserRole.CUSTOMER ? 'CUSTOMER_TO_TECH' : 'TECH_TO_CUSTOMER';
-      const updated = await rateOrder(selectedOrder.id, rating, comment, type);
-      setSelectedOrder(updated);
-      await loadOrders(currentUser);
+      await rateOrder(selectedOrder.id, rating, comment, type);
+      const data = await getOrders(currentUser);
+      setOrders(data);
+      const next = data.find(o => o.id === selectedOrder.id) || null;
+      setSelectedOrder(next);
       setComment('');
       setRating(5);
     } finally {
@@ -390,7 +393,7 @@ const App = () => {
                       <p className="text-sm font-bold text-gray-900">维修师傅</p>
                       <p className="text-sm text-gray-600">{selectedOrder.techName}</p>
                     </div>
-                    <a href={`tel:123`} className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-green-600 shadow-sm">
+                    <a href={`tel:${selectedOrder.customerPhone}`} className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-green-600 shadow-sm">
                        <Phone size={20} />
                     </a>
                   </div>
