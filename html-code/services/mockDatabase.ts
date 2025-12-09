@@ -1,7 +1,8 @@
 
 import { Order, OrderStatus, User, UserRole, ServiceType } from '../types';
 import { MOCK_USERS } from '../constants';
-const BASE: string = (import.meta as any).env?.VITE_API_BASE_URL || '';
+const BASE: string = import.meta.env?.VITE_API_BASE_URL || '';
+const API_TOKEN: string = import.meta.env?.VITE_API_TOKEN || '';
 const isRemote = !!BASE;
 
 const DB_KEYS = {
@@ -56,10 +57,14 @@ export const getCurrentUser = (): User | null => {
 
 export const getOrders = async (user: User): Promise<Order[]> => {
   if (isRemote) {
-    const r = await fetch(`${BASE}/orders?userId=${user.id}&role=${user.role}`);
+    const r = await fetch(`${BASE}/orders?userId=${encodeURIComponent(user.id)}&role=${encodeURIComponent(user.role)}`, {
+      headers: {
+        ...(API_TOKEN ? { Authorization: API_TOKEN } : {})
+      }
+    });
     if (!r.ok) throw new Error('fetch orders failed');
-    const data = await r.json();
-    return data as Order[];
+    const data: Order[] = await r.json();
+    return data;
   }
   const orders: Order[] = JSON.parse(localStorage.getItem(DB_KEYS.ORDERS) || '[]');
   if (user.role === UserRole.CUSTOMER) {
@@ -72,7 +77,6 @@ export const getOrders = async (user: User): Promise<Order[]> => {
 
 export const createOrder = async (orderData: Partial<Order>): Promise<Order> => {
   if (isRemote) {
-    const now = Date.now();
     const payload = {
       customerId: orderData.customerId,
       customerName: orderData.customerName,
@@ -82,23 +86,13 @@ export const createOrder = async (orderData: Partial<Order>): Promise<Order> => 
       description: orderData.description,
       serviceType: orderData.serviceType
     };
-    const r = await fetch(`${BASE}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const r = await fetch(`${BASE}/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(API_TOKEN ? { Authorization: API_TOKEN } : {}) },
+      body: JSON.stringify(payload)
+    });
     if (!r.ok) throw new Error('create order failed');
-    const resp = await r.json();
-    const newOrder: Order = {
-      id: resp.id,
-      customerId: orderData.customerId!,
-      customerName: orderData.customerName!,
-      customerPhone: orderData.customerPhone!,
-      category: orderData.category || '其他',
-      address: orderData.address!,
-      description: orderData.description!,
-      serviceType: orderData.serviceType!,
-      status: OrderStatus.PENDING,
-      createdAt: now,
-      updatedAt: now,
-      images: orderData.images || []
-    };
+    const newOrder: Order = await r.json();
     return newOrder;
   }
   const orders: Order[] = JSON.parse(localStorage.getItem(DB_KEYS.ORDERS) || '[]');
@@ -124,26 +118,14 @@ export const createOrder = async (orderData: Partial<Order>): Promise<Order> => 
 export const updateOrderStatus = async (orderId: string, status: OrderStatus, techId?: string, techName?: string): Promise<Order> => {
   if (isRemote) {
     const payload = { status, techId, techName };
-    const r = await fetch(`${BASE}/orders/${orderId}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const r = await fetch(`${BASE}/orders/${encodeURIComponent(orderId)}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...(API_TOKEN ? { Authorization: API_TOKEN } : {}) },
+      body: JSON.stringify(payload)
+    });
     if (!r.ok) throw new Error('update status failed');
-    const now = Date.now();
-    const stub: Order = {
-      id: orderId,
-      customerId: '',
-      customerName: '',
-      customerPhone: '',
-      category: '',
-      address: '',
-      description: '',
-      serviceType: ServiceType.HOME as any,
-      status,
-      createdAt: now,
-      updatedAt: now,
-      images: [],
-      techId,
-      techName
-    } as unknown as Order;
-    return stub;
+    const updated: Order = await r.json();
+    return updated;
   }
   const orders: Order[] = JSON.parse(localStorage.getItem(DB_KEYS.ORDERS) || '[]');
   const index = orders.findIndex(o => o.id === orderId);
@@ -163,24 +145,14 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus, te
 export const rateOrder = async (orderId: string, rating: number, comment: string, type: 'CUSTOMER_TO_TECH' | 'TECH_TO_CUSTOMER'): Promise<Order> => {
   if (isRemote) {
     const payload = { rating, comment, type };
-    const r = await fetch(`${BASE}/orders/${orderId}/rate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const r = await fetch(`${BASE}/orders/${encodeURIComponent(orderId)}/rate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(API_TOKEN ? { Authorization: API_TOKEN } : {}) },
+      body: JSON.stringify(payload)
+    });
     if (!r.ok) throw new Error('rate failed');
-    const now = Date.now();
-    const stub: Order = {
-      id: orderId,
-      customerId: '',
-      customerName: '',
-      customerPhone: '',
-      category: '',
-      address: '',
-      description: '',
-      serviceType: ServiceType.HOME as any,
-      status: OrderStatus.COMPLETED,
-      createdAt: now,
-      updatedAt: now,
-      images: []
-    } as unknown as Order;
-    return stub;
+    const updated: Order = await r.json();
+    return updated;
   }
   const orders: Order[] = JSON.parse(localStorage.getItem(DB_KEYS.ORDERS) || '[]');
   const index = orders.findIndex(o => o.id === orderId);
