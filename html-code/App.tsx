@@ -258,7 +258,7 @@ const App = () => {
                   <OrderCard 
                     key={order.id} 
                     order={order} 
-                    currentUserRole={currentUser!.role}
+                    currentUserRole={currentUser?.role || UserRole.CUSTOMER}
                     onClick={(o) => { setSelectedOrder(o); setView('ORDER_DETAIL'); }}
                   />
                 ))
