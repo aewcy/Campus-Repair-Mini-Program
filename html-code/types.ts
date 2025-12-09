@@ -35,6 +35,7 @@ export interface Order {
   customerPhone: string;
   techId?: string;
   techName?: string;
+  techPhone?: string;
   category: string;
   address: string;
   description: string;

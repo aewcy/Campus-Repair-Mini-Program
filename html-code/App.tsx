@@ -393,8 +393,8 @@ const App = () => {
                       <p className="text-sm font-bold text-gray-900">维修师傅</p>
                       <p className="text-sm text-gray-600">{selectedOrder.techName}</p>
                     </div>
-                    <a href={`tel:${selectedOrder.customerPhone}`} className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-green-600 shadow-sm">
-                       <Phone size={20} />
+                    <a href={`tel:${(currentUser?.role === UserRole.CUSTOMER) ? (selectedOrder.techPhone || selectedOrder.customerPhone) : selectedOrder.customerPhone}`} className="w-10 h-10 bg-white border border-gray-200 rounded-full flex items-center justify-center text-green-600 shadow-sm">
+                        <Phone size={20} />
                     </a>
                   </div>
                 )}
