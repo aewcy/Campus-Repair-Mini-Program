@@ -1,4 +1,4 @@
-export default defineAppConfig({
+export default {
   pages: [
     'pages/login/index',
     'pages/home/index',
@@ -22,5 +22,4 @@ export default defineAppConfig({
       { pagePath: 'pages/profile/index', text: '我的' }
     ]
   }
-})
-
+}

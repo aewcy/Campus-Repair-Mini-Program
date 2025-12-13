@@ -8,20 +8,20 @@
     "build:weapp": "taro build --type weapp"
   },
   "dependencies": {
-    "@tarojs/components": "^3.6.30",
-    "@tarojs/plugin-framework-react": "^3.6.30",
-    "@tarojs/react": "^3.6.38",
-    "@tarojs/runtime": "^3.6.30",
-    "@tarojs/taro": "^3.6.30",
+    "@tarojs/components": "3.6.38",
+    "@tarojs/plugin-framework-react": "3.6.38",
+    "@tarojs/react": "3.6.38",
+    "@tarojs/runtime": "3.6.38",
+    "@tarojs/taro": "3.6.38",
     "react": "^18.0.0",
     "react-dom": "^18.0.0"
   },
   "devDependencies": {
     "@babel/preset-react": "^7.28.5",
     "@babel/preset-typescript": "^7.28.5",
-    "@tarojs/cli": "^3.6.30",
-    "@tarojs/plugin-platform-weapp": "^3.6.38",
-    "@tarojs/webpack5-runner": "^3.6.38",
+    "@tarojs/cli": "3.6.38",
+    "@tarojs/plugin-platform-weapp": "3.6.38",
+    "@tarojs/webpack5-runner": "3.6.38",
     "typescript": "^5.6.0"
   }
 }
