@@ -1,3 +1,5 @@
+// 应用：Web 端单页入口
+// 作用：管理登录/下单/订单详情/个人中心等视图状态，调用服务层获取数据
 import React, { useState, useEffect } from 'react';
 import { User, UserRole, Order, OrderStatus, ServiceType } from '../types';
 import { loginUser, logoutUser, getCurrentUser, getOrders, createOrder, updateOrderStatus, rateOrder } from './services/mockDatabase';
@@ -22,8 +24,10 @@ import {
   MessageSquare
 } from 'lucide-react';
 
+// 视图枚举：当前显示的页面
 type View = 'LOGIN' | 'HOME' | 'CREATE_ORDER' | 'ORDER_DETAIL' | 'PROFILE' | 'PRIVACY';
 
+// 顶层组件：负责状态管理与路由切换
 const App = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [view, setView] = useState<View>('LOGIN');
@@ -31,6 +35,7 @@ const App = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
+  // 下单表单状态
   const [formData, setFormData] = useState({
     category: REPAIR_CATEGORIES[0],
     address: '',
@@ -40,9 +45,11 @@ const App = () => {
     contactPhone: ''
   });
 
+  // 评价状态
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
 
+  // 初始化：尝试读取登录态并加载订单
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
@@ -52,6 +59,7 @@ const App = () => {
     }
   }, []);
 
+  // 拉取订单列表
   const loadOrders = async (user: User) => {
     setIsLoading(true);
     try {
@@ -62,6 +70,7 @@ const App = () => {
     }
   };
 
+  // 登录：根据角色创建/读取用户并加载订单
   const handleLogin = async (role: UserRole) => {
     setIsLoading(true);
     try {
@@ -74,12 +83,14 @@ const App = () => {
     }
   };
 
+  // 登出：清空登录态并返回登录页
   const handleLogout = async () => {
     await logoutUser();
     setCurrentUser(null);
     setView('LOGIN');
   };
 
+  // 创建订单：校验必填项并提交
   const handleCreateOrder = async () => {
     if (!currentUser || !formData.address || !formData.description) {
       alert("请填写完整信息");
@@ -108,6 +119,7 @@ const App = () => {
     }
   };
 
+  // 更新订单状态：师傅接单/开始/完成，客户取消
   const handleStatusChange = async (status: OrderStatus) => {
     if (!selectedOrder || !currentUser) return;
     setIsLoading(true);
@@ -124,6 +136,7 @@ const App = () => {
     }
   };
 
+  // 评价订单：打分与评论持久化
   const handleRating = async () => {
     if (!selectedOrder || !currentUser) return;
     setIsLoading(true);
@@ -141,6 +154,7 @@ const App = () => {
     }
   };
 
+  // 登录视图
   if (view === 'LOGIN') {
     return (
       <div className="min-h-screen bg-white flex flex-col justify-center px-6">
@@ -174,6 +188,7 @@ const App = () => {
     );
   }
 
+  // 隐私政策视图
   if (view === 'PRIVACY') {
     return (
       <div className="min-h-screen bg-white p-6">
@@ -194,6 +209,7 @@ const App = () => {
     );
   }
 
+  // 头部标题：根据视图返回标题
   const getHeaderTitle = () => {
     switch (view) {
       case 'HOME': return 'WeFix 维修';
@@ -204,6 +220,7 @@ const App = () => {
     }
   };
 
+  // 主渲染：根据视图展示内容
   return (
     <div className="min-h-screen bg-gray-100 pb-safe">
       <div className="bg-white text-gray-900 border-b border-gray-200 px-4 pt-safe h-12 flex items-center sticky top-0 z-40">

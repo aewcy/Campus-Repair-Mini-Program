@@ -1,10 +1,14 @@
+// 组件：订单状态徽章
+// 作用：以颜色区分不同状态的可视化提示
 import React from 'react';
 import { OrderStatus } from '../../types';
 
+// 属性定义：订单状态
 interface StatusBadgeProps {
   status: OrderStatus;
 }
 
+// 组件主体：根据状态选择颜色并渲染徽章
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   let colorClass = "";
   switch (status) {
@@ -23,4 +27,3 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
 };
 
 export default StatusBadge;
-

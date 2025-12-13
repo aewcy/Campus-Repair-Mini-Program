@@ -1,13 +1,17 @@
+// 组件：订单卡片
+// 作用：展示订单概要信息，支持点击进入详情
 import React from 'react';
 import { Order, OrderStatus, UserRole } from '../../types';
 import { MapPin, Clock, Wrench, AlertCircle, Phone, ArrowRight } from 'lucide-react';
 
+// 属性定义：订单数据、点击回调、当前用户角色
 interface OrderCardProps {
   order: Order;
   onClick: (order: Order) => void;
   currentUserRole: UserRole;
 }
 
+// 状态样式映射：不同订单状态对应颜色
 const getStatusColor = (status: OrderStatus) => {
   switch (status) {
     case OrderStatus.PENDING: return 'text-orange-500 bg-orange-50';
@@ -19,6 +23,7 @@ const getStatusColor = (status: OrderStatus) => {
   }
 };
 
+// 组件主体：渲染订单卡片
 const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, currentUserRole }) => {
   return (
     <div 
@@ -75,4 +80,3 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, currentUserRole }
 };
 
 export default OrderCard;
-

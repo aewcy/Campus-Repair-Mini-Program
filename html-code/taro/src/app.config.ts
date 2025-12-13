@@ -1,3 +1,4 @@
+// 应用配置：声明页面路由与 tabBar
 export default {
   pages: [
     'pages/login/index',

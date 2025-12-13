@@ -1,13 +1,17 @@
+// 组件：底部导航栏
+// 作用：在首页/下单/我的之间进行切换，客户角色显示“下单”快捷入口
 import React from 'react';
 import { Home, List, User as UserIcon, PlusCircle } from 'lucide-react';
 import { UserRole } from '../../types';
 
+// 属性定义：当前 tab、切换回调、用户角色
 interface TabBarProps {
   currentTab: string;
   onTabChange: (tab: string) => void;
   role: UserRole;
 }
 
+// 组件主体：根据角色与当前 tab 渲染
 const TabBar: React.FC<TabBarProps> = ({ currentTab, onTabChange, role }) => {
   const isCustomer = role === UserRole.CUSTOMER;
 
