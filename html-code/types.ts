@@ -1,4 +1,4 @@
-
+// 通用类型定义，供两端复用
 export enum UserRole {
   GUEST = 'GUEST',
   CUSTOMER = 'CUSTOMER',
