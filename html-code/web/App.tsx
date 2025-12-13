@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { User, UserRole, Order, OrderStatus, ServiceType } from './types';
+import { User, UserRole, Order, OrderStatus, ServiceType } from '../types';
 import { loginUser, logoutUser, getCurrentUser, getOrders, createOrder, updateOrderStatus, rateOrder } from './services/mockDatabase';
 import TabBar from './components/TabBar';
 import OrderCard from './components/OrderCard';
@@ -23,7 +22,6 @@ import {
   MessageSquare
 } from 'lucide-react';
 
-// Simplified Router
 type View = 'LOGIN' | 'HOME' | 'CREATE_ORDER' | 'ORDER_DETAIL' | 'PROFILE' | 'PRIVACY';
 
 const App = () => {
@@ -33,7 +31,6 @@ const App = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Create Order Form State
   const [formData, setFormData] = useState({
     category: REPAIR_CATEGORIES[0],
     address: '',
@@ -43,11 +40,9 @@ const App = () => {
     contactPhone: ''
   });
 
-  // Rating State
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
 
-  // Initial Load
   useEffect(() => {
     const user = getCurrentUser();
     if (user) {
@@ -100,7 +95,6 @@ const App = () => {
       });
       await loadOrders(currentUser);
       setView('HOME');
-      // Reset form
       setFormData({
          category: REPAIR_CATEGORIES[0],
          address: '',
@@ -146,8 +140,6 @@ const App = () => {
       setIsLoading(false);
     }
   };
-
-  // --- Views ---
 
   if (view === 'LOGIN') {
     return (
@@ -202,7 +194,6 @@ const App = () => {
     );
   }
 
-  // Helper for rendering header
   const getHeaderTitle = () => {
     switch (view) {
       case 'HOME': return 'WeFix 维修';
@@ -215,7 +206,6 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 pb-safe">
-      {/* Header - Fixed & Native Look */}
       <div className="bg-white text-gray-900 border-b border-gray-200 px-4 pt-safe h-12 flex items-center sticky top-0 z-40">
         {(view === 'ORDER_DETAIL') && (
           <button onClick={() => setView('HOME')} className="absolute left-4 p-1 -ml-1 text-gray-600">
@@ -225,7 +215,6 @@ const App = () => {
         <h1 className="font-semibold text-lg flex-1 text-center">{getHeaderTitle()}</h1>
       </div>
 
-      {/* Main Content */}
       <div className="p-4 pb-24">
         {isLoading && (
           <div className="fixed inset-0 bg-black/10 z-50 flex items-center justify-center backdrop-blur-sm">
@@ -235,7 +224,6 @@ const App = () => {
           </div>
         )}
 
-        {/* HOME VIEW */}
         {view === 'HOME' && (
           <div>
             {currentUser?.role === UserRole.TECHNICIAN && (
@@ -267,7 +255,6 @@ const App = () => {
           </div>
         )}
 
-        {/* CREATE ORDER VIEW */}
         {view === 'CREATE_ORDER' && (
           <div className="bg-white rounded-xl shadow-sm overflow-hidden">
             <div className="p-4 border-b border-gray-100">
@@ -347,7 +334,6 @@ const App = () => {
           </div>
         )}
 
-        {/* ORDER DETAIL VIEW */}
         {view === 'ORDER_DETAIL' && selectedOrder && (
           <div className="space-y-4">
             <div className="bg-white p-5 rounded-2xl shadow-sm">
@@ -401,9 +387,7 @@ const App = () => {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="pb-8">
-               {/* Technician Actions */}
                {currentUser?.role === UserRole.TECHNICIAN && (
                  <>
                    {selectedOrder.status === OrderStatus.PENDING && (
@@ -433,7 +417,6 @@ const App = () => {
                  </>
                )}
 
-               {/* Customer Actions */}
                {currentUser?.role === UserRole.CUSTOMER && (
                  <>
                    {selectedOrder.status === OrderStatus.PENDING && (
@@ -477,69 +460,18 @@ const App = () => {
           </div>
         )}
 
-        {/* PROFILE VIEW */}
-        {view === 'PROFILE' && (
-          <div className="space-y-4">
-            <div className="bg-white p-6 rounded-2xl shadow-sm flex items-center space-x-4">
-               <img src={currentUser?.avatar} alt="Avatar" className="w-16 h-16 rounded-full bg-gray-100 object-cover" />
-               <div className="flex-1">
-                 <h2 className="text-xl font-bold text-gray-900">{currentUser?.name}</h2>
-                 <p className="text-sm text-gray-500 mt-0.5">{currentUser?.phone}</p>
-                 <span className={`inline-block px-2.5 py-0.5 text-xs font-medium rounded-full mt-2 ${currentUser?.role === UserRole.CUSTOMER ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'}`}>
-                   {currentUser?.role === UserRole.CUSTOMER ? '普通客户' : '认证维修师'}
-                 </span>
-               </div>
-            </div>
-
-            <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-               <button className="w-full flex items-center justify-between p-4 border-b border-gray-100 active:bg-gray-50">
-                  <div className="flex items-center text-gray-900 text-sm font-medium">
-                    <MessageSquare size={20} className="mr-3 text-green-500" />
-                    <span>我的消息</span>
-                  </div>
-                  <ChevronRight size={16} className="text-gray-400" />
-               </button>
-               <button className="w-full flex items-center justify-between p-4 border-b border-gray-100 active:bg-gray-50">
-                  <div className="flex items-center text-gray-900 text-sm font-medium">
-                    <ShieldCheck size={20} className="mr-3 text-green-500" />
-                    <span>{currentUser?.role === UserRole.TECHNICIAN ? '资质管理' : '地址管理'}</span>
-                  </div>
-                  <ChevronRight size={16} className="text-gray-400" />
-               </button>
-               <button onClick={() => setView('PRIVACY')} className="w-full flex items-center justify-between p-4 active:bg-gray-50">
-                  <div className="flex items-center text-gray-900 text-sm font-medium">
-                    <FileText size={20} className="mr-3 text-green-500" />
-                    <span>隐私政策</span>
-                  </div>
-                  <ChevronRight size={16} className="text-gray-400" />
-               </button>
-            </div>
-
-            <button 
-              onClick={handleLogout}
-              className="w-full bg-white text-red-500 p-4 rounded-2xl shadow-sm flex items-center justify-center font-medium active:bg-red-50 transition-colors"
-            >
-              <LogOut size={20} className="mr-2" />
-              退出登录
-            </button>
-            
-            <p className="text-center text-xs text-gray-300 pt-4">WeFix v1.0.2</p>
-          </div>
+        {view !== 'LOGIN' && view !== 'PRIVACY' && view !== 'ORDER_DETAIL' && (
+          <TabBar 
+            currentTab={view === 'CREATE_ORDER' ? 'create' : view === 'PROFILE' ? 'profile' : 'home'}
+            onTabChange={(t) => {
+              if (t === 'home') setView('HOME');
+              if (t === 'create') setView('CREATE_ORDER');
+              if (t === 'profile') setView('PROFILE');
+            }}
+            role={currentUser?.role || UserRole.CUSTOMER}
+          />
         )}
       </div>
-
-      {/* Tab Bar */}
-      {view !== 'LOGIN' && view !== 'PRIVACY' && view !== 'ORDER_DETAIL' && (
-        <TabBar 
-          currentTab={view === 'CREATE_ORDER' ? 'create' : view === 'PROFILE' ? 'profile' : 'home'}
-          onTabChange={(t) => {
-            if (t === 'home') setView('HOME');
-            if (t === 'create') setView('CREATE_ORDER');
-            if (t === 'profile') setView('PROFILE');
-          }}
-          role={currentUser?.role || UserRole.CUSTOMER}
-        />
-      )}
     </div>
   );
 };

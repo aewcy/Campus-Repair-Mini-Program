@@ -1,5 +1,4 @@
-
-import { Order, OrderStatus, User, UserRole, ServiceType } from '../types';
+import { Order, OrderStatus, User, UserRole, ServiceType } from '../../types';
 import { MOCK_USERS } from '../constants';
 const BASE: string = import.meta.env?.VITE_API_BASE_URL || '';
 const API_TOKEN: string = import.meta.env?.VITE_API_TOKEN || '';
@@ -11,7 +10,6 @@ const DB_KEYS = {
   CURRENT_USER: 'wefix_current_user'
 };
 
-// Initialize DB
 const initDB = () => {
   if (!localStorage.getItem(DB_KEYS.USERS)) {
     localStorage.setItem(DB_KEYS.USERS, JSON.stringify(MOCK_USERS));
@@ -25,7 +23,6 @@ initDB();
 
 export const loginUser = async (role: UserRole): Promise<User> => {
   const users = JSON.parse(localStorage.getItem(DB_KEYS.USERS) || '[]');
-  // Simple mock login: find first user of role or create one
   let user = users.find((u: User) => u.role === role);
   
   if (!user) {
@@ -169,3 +166,4 @@ export const rateOrder = async (orderId: string, rating: number, comment: string
   localStorage.setItem(DB_KEYS.ORDERS, JSON.stringify(orders));
   return order;
 };
+

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Order, OrderStatus, UserRole } from '../types';
+import { Order, OrderStatus, UserRole } from '../../types';
 import { MapPin, Clock, Wrench, AlertCircle, Phone, ArrowRight } from 'lucide-react';
 
 interface OrderCardProps {
@@ -75,3 +75,4 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, onClick, currentUserRole }
 };
 
 export default OrderCard;
+

@@ -1,4 +1,3 @@
-
 export const MOCK_DELAY = 500;
 
 export const REPAIR_CATEGORIES = [
@@ -26,3 +25,4 @@ export const MOCK_USERS = [
     rating: 4.8
   }
 ];
+

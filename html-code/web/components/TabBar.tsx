@@ -1,6 +1,6 @@
 import React from 'react';
 import { Home, List, User as UserIcon, PlusCircle } from 'lucide-react';
-import { UserRole } from '../types';
+import { UserRole } from '../../types';
 
 interface TabBarProps {
   currentTab: string;

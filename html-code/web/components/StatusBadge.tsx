@@ -1,5 +1,5 @@
 import React from 'react';
-import { OrderStatus } from '../types';
+import { OrderStatus } from '../../types';
 
 interface StatusBadgeProps {
   status: OrderStatus;
@@ -23,3 +23,4 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
 };
 
 export default StatusBadge;
+
