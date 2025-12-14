@@ -1,15 +1,65 @@
-// 页面：首页（订单列表、公告等入口）
-// 说明：后续可从服务层拉取订单并在此展示
-import React from 'react'
-import { View, Text } from '@tarojs/components'
+import React, { useEffect, useState } from 'react'
+import { View, Text, ScrollView } from '@tarojs/components'
+import Taro, { useDidShow } from '@tarojs/taro'
+import { getCurrentUser, getOrders } from '../../services/api'
+import { Order, User } from '@/types'
 
-// 组件：页面函数式组件
 const HomePage = () => {
+  const [user, setUser] = useState<User | null>(null)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(false)
+
+  const load = async () => {
+    const u = getCurrentUser()
+    setUser(u)
+    if (!u) return
+    setLoading(true)
+    try {
+      const list = await getOrders(u)
+      setOrders(list)
+    } catch (e) {
+      Taro.showToast({ title: '订单加载失败', icon: 'none' })
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+  useDidShow(() => {
+    load()
+  })
+
   return (
-    // 布局：基础容器，设置内边距
-    <View style={{ padding: 24 }}>
-      {/* 标题文案占位 */}
-      <Text>首页</Text>
+    <View style={{ padding: 16 }}>
+      <Text style={{ fontSize: 18, fontWeight: 600 }}>
+        {user ? `欢迎，${user.name}` : '请先登录'}
+      </Text>
+      {user && (
+        <View style={{ marginTop: 12 }}>
+          <Text>我的订单（{orders.length}）</Text>
+        </View>
+      )}
+      {loading && <Text style={{ marginTop: 12 }}>加载中...</Text>}
+      {!loading && user && orders.length === 0 && (
+        <Text style={{ marginTop: 12 }}>暂无订单</Text>
+      )}
+      {!loading && user && orders.length > 0 && (
+        <ScrollView scrollY style={{ height: '70vh', marginTop: 12 }}>
+          {orders.map(o => (
+            <View key={o.id} style={{ padding: 12, borderBottom: '1px solid #eee' }}>
+              <Text>{o.category} | {o.status}</Text>
+              <View style={{ marginTop: 4 }}>
+                <Text>{o.description}</Text>
+              </View>
+              <View style={{ marginTop: 4 }}>
+                <Text>{new Date(o.createdAt).toLocaleString()}</Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+      )}
     </View>
   )
 }
