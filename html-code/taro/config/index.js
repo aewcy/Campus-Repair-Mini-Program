@@ -17,7 +17,10 @@ const config = {
   alias: {
     '@': path.resolve(__dirname, '..', 'src')
   },
-  defineConstants: {},
+  defineConstants: {
+    'process.env.VITE_API_BASE_URL': JSON.stringify(process.env.VITE_API_BASE_URL || ''),
+    'process.env.VITE_API_TOKEN': JSON.stringify(process.env.VITE_API_TOKEN || '')
+  },
   babel: {
     presets: [
       ['@babel/preset-react', { runtime: 'automatic' }],

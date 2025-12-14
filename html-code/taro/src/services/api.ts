@@ -1,7 +1,7 @@
 // 模块：业务服务层（小程序端）
 // 作用：统一封装网络请求与本地数据读写，页面只需调用函数
 import Taro from '@tarojs/taro'
-import { Order, OrderStatus, User, UserRole, ServiceType } from '../../../types'
+import { Order, OrderStatus, User, UserRole, ServiceType } from '@/types'
 import { set as setStore, get as getStore, remove as removeStore } from './storage'
 
 // 环境变量：通过编译期/运行时注入后端地址与令牌
@@ -13,7 +13,8 @@ const isRemote = !!BASE
 const DB_KEYS = {
   ORDERS: 'wefix_orders',
   USERS: 'wefix_users',
-  CURRENT_USER: 'wefix_current_user'
+  CURRENT_USER: 'wefix_current_user',
+  AUTH_TOKEN: 'wefix_auth_token'
 }
 
 // 请求封装：统一设置头信息与错误处理
@@ -21,6 +22,7 @@ const request = async <T>(url: string, options: Taro.request.Option = {}): Promi
   const headers = {
     'Content-Type': 'application/json',
     ...(API_TOKEN ? { Authorization: API_TOKEN } : {}),
+    ...(getStore<string>(DB_KEYS.AUTH_TOKEN, '') ? { Authorization: `Bearer ${getStore<string>(DB_KEYS.AUTH_TOKEN, '')}` } : {}),
     ...(options.header || {})
   }
   const res = await Taro.request<T>({ url, ...options, header: headers })
@@ -28,6 +30,36 @@ const request = async <T>(url: string, options: Taro.request.Option = {}): Promi
     throw new Error(`request failed: ${res.statusCode}`)
   }
   return res.data as T
+}
+
+// 账号密码登录：后端校验并返回用户与令牌
+export const loginWithPassword = async (account: string, password: string): Promise<User> => {
+  if (!BASE) {
+    // 无后端地址时，退回到本地模拟用户
+    const users = getStore<User[]>(DB_KEYS.USERS, []) || []
+    let user = users.find(u => u.role === UserRole.CUSTOMER)
+    if (!user) {
+      user = {
+        id: `user_${Date.now()}`,
+        name: '本地用户',
+        avatar: `https://picsum.photos/seed/${Date.now()}/100/100`,
+        role: UserRole.CUSTOMER,
+        phone: '13000000000',
+        rating: 5.0
+      }
+      users.push(user)
+      setStore(DB_KEYS.USERS, users)
+    }
+    setStore(DB_KEYS.CURRENT_USER, user)
+    return user
+  }
+  const data = await request<{ user: User; token: string }>(`${BASE}/auth/login`, {
+    method: 'POST',
+    data: { account, password }
+  })
+  setStore(DB_KEYS.AUTH_TOKEN, data.token)
+  setStore(DB_KEYS.CURRENT_USER, data.user)
+  return data.user
 }
 
 // 登录：按角色返回用户信息（远程走后端，本地走模拟）
@@ -59,6 +91,7 @@ export const loginUser = async (role: UserRole): Promise<User> => {
 // 登出：清空当前用户
 export const logoutUser = async () => {
   removeStore(DB_KEYS.CURRENT_USER)
+  removeStore(DB_KEYS.AUTH_TOKEN)
 }
 
 // 获取当前用户：若未登录返回 null
