@@ -1,6 +1,6 @@
 {
   "name": "Copy of WeFix 维修订单系统",
-  "description": "基于微信小程序风格的维修订单管理系统，支持客户发布需求、维修员接单、流程状态管理。",
+  "description": "维修预约小程序",
   "requestFramePermissions": [
     "camera",
     "microphone"
