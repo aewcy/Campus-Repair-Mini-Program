@@ -12,7 +12,6 @@ const CreateOrderPage = () => {
   const [address, setAddress] = useState('')
   const [description, setDescription] = useState('')
   const [primaryPhone, setPrimaryPhone] = useState('')
-  const [altPhone, setAltPhone] = useState('')
 
   useEffect(() => {
     const u = getCurrentUser()
@@ -29,7 +28,7 @@ const CreateOrderPage = () => {
       Taro.showToast({ title: '请填写地址与问题描述', icon: 'none' })
       return
     }
-    const finalPhone = (altPhone || primaryPhone).trim()
+    const finalPhone = (primaryPhone).trim()
     if (!/^\d{11}$/.test(finalPhone)) {
       Taro.showToast({ title: '请输入有效手机号', icon: 'none' })
       return
@@ -68,12 +67,8 @@ const CreateOrderPage = () => {
         </RadioGroup>
       </View>
       <View style={{ marginTop: 12 }}>
-        <Text>默认手机号</Text>
-        <Input placeholder='系统默认手机号' value={primaryPhone} disabled />
-      </View>
-      <View style={{ marginTop: 12 }}>
-        <Text>其他手机号（选填）</Text>
-        <Input placeholder='可填写备用联系方式' value={altPhone} onInput={(e) => setAltPhone(e.detail.value)} />
+        <Text>手机号</Text>
+        <Input placeholder='请输入联系手机号' value={primaryPhone} onInput={(e) => setPrimaryPhone(e.detail.value)} />
       </View>
       <View style={{ marginTop: 12 }}>
         <Text>地址</Text>
