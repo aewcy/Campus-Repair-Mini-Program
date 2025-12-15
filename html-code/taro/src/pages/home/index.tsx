@@ -48,7 +48,11 @@ const HomePage = () => {
       {!loading && user && orders.length > 0 && (
         <ScrollView scrollY style={{ height: '70vh', marginTop: 12 }}>
           {orders.map(o => (
-            <View key={o.id} style={{ padding: 12, borderBottom: '1px solid #eee' }}>
+            <View
+              key={o.id}
+              style={{ padding: 12, borderBottom: '1px solid #eee' }}
+              onClick={() => Taro.navigateTo({ url: `/pages/order-detail/index?id=${o.id}` })}
+            >
               <Text>{o.category} | {o.status}</Text>
               <View style={{ marginTop: 4 }}>
                 <Text>{o.description}</Text>

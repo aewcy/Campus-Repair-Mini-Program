@@ -169,6 +169,35 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus, te
   return order
 }
 
+// 获取订单详情
+export const getOrderById = async (orderId: string): Promise<Order> => {
+  if (isRemote) {
+    return await request<Order>(`${BASE}/orders/${encodeURIComponent(orderId)}`, { method: 'GET' })
+  }
+  const orders: Order[] = getStore<Order[]>(DB_KEYS.ORDERS, []) || []
+  const order = orders.find(o => o.id === orderId)
+  if (!order) throw new Error('Order not found')
+  return order
+}
+
+// 修改订单信息：支持更新地址、描述、联系电话
+export const updateOrderInfo = async (orderId: string, patch: Partial<Pick<Order, 'address' | 'description' | 'customerPhone'>>): Promise<Order> => {
+  if (isRemote) {
+    return await request<Order>(`${BASE}/orders/${encodeURIComponent(orderId)}`, { method: 'PATCH', data: patch })
+  }
+  const orders: Order[] = getStore<Order[]>(DB_KEYS.ORDERS, []) || []
+  const index = orders.findIndex(o => o.id === orderId)
+  if (index === -1) throw new Error('Order not found')
+  const order = orders[index]
+  if (patch.address !== undefined) order.address = patch.address
+  if (patch.description !== undefined) order.description = patch.description
+  if (patch.customerPhone !== undefined) order.customerPhone = patch.customerPhone
+  order.updatedAt = Date.now()
+  orders[index] = order
+  setStore(DB_KEYS.ORDERS, orders)
+  return order
+}
+
 // 评价订单：支持双方互评
 export const rateOrder = async (orderId: string, rating: number, comment: string, type: 'CUSTOMER_TO_TECH' | 'TECH_TO_CUSTOMER'): Promise<Order> => {
   if (isRemote) {
