@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { View, Text, Input, Textarea, Picker, Button, RadioGroup, Radio } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { createOrder, getCurrentUser } from '../../services/api'
@@ -11,6 +11,13 @@ const CreateOrderPage = () => {
   const [serviceType, setServiceType] = useState<ServiceType>(ServiceType.HOME)
   const [address, setAddress] = useState('')
   const [description, setDescription] = useState('')
+  const [primaryPhone, setPrimaryPhone] = useState('')
+  const [altPhone, setAltPhone] = useState('')
+
+  useEffect(() => {
+    const u = getCurrentUser()
+    if (u?.phone) setPrimaryPhone(u.phone)
+  }, [])
 
   const handleSubmit = async () => {
     const user = getCurrentUser()
@@ -22,11 +29,16 @@ const CreateOrderPage = () => {
       Taro.showToast({ title: '请填写地址与问题描述', icon: 'none' })
       return
     }
+    const finalPhone = (altPhone || primaryPhone).trim()
+    if (!/^\d{11}$/.test(finalPhone)) {
+      Taro.showToast({ title: '请输入有效手机号', icon: 'none' })
+      return
+    }
     try {
       await createOrder({
         customerId: user.id,
         customerName: user.name,
-        customerPhone: user.phone,
+        customerPhone: finalPhone,
         category: CATEGORIES[categoryIdx],
         address,
         description,
@@ -54,6 +66,14 @@ const CreateOrderPage = () => {
           <Radio value={ServiceType.HOME} checked={serviceType === ServiceType.HOME}>上门服务</Radio>
           <Radio value={ServiceType.SHOP} checked={serviceType === ServiceType.SHOP} style={{ marginLeft: 12 }}>到店维修</Radio>
         </RadioGroup>
+      </View>
+      <View style={{ marginTop: 12 }}>
+        <Text>默认手机号</Text>
+        <Input placeholder='系统默认手机号' value={primaryPhone} disabled />
+      </View>
+      <View style={{ marginTop: 12 }}>
+        <Text>其他手机号（选填）</Text>
+        <Input placeholder='可填写备用联系方式' value={altPhone} onInput={(e) => setAltPhone(e.detail.value)} />
       </View>
       <View style={{ marginTop: 12 }}>
         <Text>地址</Text>
