@@ -48,6 +48,11 @@ const LoginPage = () => {
       <Button style={{ marginTop: 24 }} type='primary' onClick={handleLogin}>
         登录
       </Button>
+      <View style={{ marginTop: 12 }}>
+        <Text style={{ color: '#3b82f6' }} onClick={() => Taro.navigateTo({ url: '/pages/register/index' })}>
+          注册
+        </Text>
+      </View>
     </View>
   )
 }

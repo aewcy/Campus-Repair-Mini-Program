@@ -241,3 +241,33 @@ export const updateUserPhone = async (userId: string, phone: string): Promise<Us
   }
   return idx !== -1 ? users[idx] : (current as User)
 }
+
+// 用户注册
+export const registerUser = async (payload: { account: string; password: string; name: string; phone: string }): Promise<User> => {
+  if (isRemote) {
+    const data = await request<{ user: User; token?: string }>(`${BASE}/auth/register`, { method: 'POST', data: payload })
+    if (data.token) setStore(DB_KEYS.AUTH_TOKEN, data.token)
+    setStore(DB_KEYS.CURRENT_USER, data.user)
+    // 同步到本地列表以便本地模式切换
+    const users: User[] = getStore<User[]>(DB_KEYS.USERS, []) || []
+    const idx = users.findIndex(u => u.id === data.user.id)
+    if (idx === -1) {
+      users.push(data.user)
+      setStore(DB_KEYS.USERS, users)
+    }
+    return data.user
+  }
+  const users: User[] = getStore<User[]>(DB_KEYS.USERS, []) || []
+  const newUser: User = {
+    id: `user_${Date.now()}`,
+    name: payload.name,
+    avatar: `https://picsum.photos/seed/${Date.now()}/100/100`,
+    role: UserRole.CUSTOMER,
+    phone: payload.phone,
+    rating: 5.0
+  }
+  users.push(newUser)
+  setStore(DB_KEYS.USERS, users)
+  setStore(DB_KEYS.CURRENT_USER, newUser)
+  return newUser
+}
