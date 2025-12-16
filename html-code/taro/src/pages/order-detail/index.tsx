@@ -39,6 +39,7 @@ const OrderDetailPage = () => {
       const o = await updateOrderStatus(order.id, OrderStatus.CANCELLED)
       setOrder(o)
       Taro.showToast({ title: '已取消', icon: 'success' })
+      Taro.switchTab({ url: '/pages/home/index' })
     } catch {
       Taro.showToast({ title: '取消失败', icon: 'none' })
     }

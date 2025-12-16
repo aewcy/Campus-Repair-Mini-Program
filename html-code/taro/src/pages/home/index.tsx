@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { View, Text, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { getCurrentUser, getOrders } from '../../services/api'
-import { Order, User } from '@/types'
+import { Order, User, OrderStatus } from '@/types'
 
 const HomePage = () => {
   const [user, setUser] = useState<User | null>(null)
@@ -16,7 +16,8 @@ const HomePage = () => {
     setLoading(true)
     try {
       const list = await getOrders(u)
-      setOrders(list)
+      const active = list.filter(o => o.status !== OrderStatus.CANCELLED && o.status !== OrderStatus.COMPLETED)
+      setOrders(active)
     } catch (e) {
       Taro.showToast({ title: '订单加载失败', icon: 'none' })
     } finally {
