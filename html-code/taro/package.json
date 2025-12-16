@@ -4,7 +4,7 @@
   "private": true,
   "description": "WeFix 维修订单系统 - Taro 微信小程序端",
   "scripts": {
-    "dev:weapp": "taro dev --type weapp",
+    "dev:weapp": "taro build --type weapp --watch",
     "build:weapp": "taro build --type weapp"
   },
   "dependencies": {
