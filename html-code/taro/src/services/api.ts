@@ -33,19 +33,22 @@ const request = async <T>(url: string, options: Taro.request.Option = {}): Promi
 }
 
 // 账号密码登录：后端校验并返回用户与令牌
-export const loginWithPassword = async (account: string, password: string): Promise<User> => {
+export const loginWithPassword = async (account: string, password: string, role?: UserRole): Promise<User> => {
   if (!BASE) {
     // 无后端地址时，退回到本地模拟用户
     const users = getStore<User[]>(DB_KEYS.USERS, []) || []
-    let user = users.find(u => u.role === UserRole.CUSTOMER)
+    // 优先根据传入的角色查找，默认为 CUSTOMER
+    const targetRole = role || UserRole.CUSTOMER
+    let user = users.find(u => u.role === targetRole)
     if (!user) {
       user = {
         id: `user_${Date.now()}`,
-        name: '本地用户',
+        name: targetRole === UserRole.CUSTOMER ? '本地客户' : '本地师傅',
         avatar: `https://picsum.photos/seed/${Date.now()}/100/100`,
-        role: UserRole.CUSTOMER,
+        role: targetRole,
         phone: '13000000000',
-        rating: 5.0
+        rating: 5.0,
+        isVerified: targetRole === UserRole.TECHNICIAN ? true : undefined
       }
       users.push(user)
       setStore(DB_KEYS.USERS, users)
@@ -55,7 +58,7 @@ export const loginWithPassword = async (account: string, password: string): Prom
   }
   const data = await request<{ user: User; token: string }>(`${BASE}/auth/login`, {
     method: 'POST',
-    data: { account, password }
+    data: { account, password, role }
   })
   setStore(DB_KEYS.AUTH_TOKEN, data.token)
   setStore(DB_KEYS.CURRENT_USER, data.user)
