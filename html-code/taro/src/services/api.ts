@@ -35,9 +35,8 @@ const request = async <T>(url: string, options: Taro.request.Option = {}): Promi
 // 账号密码登录：后端校验并返回用户与令牌
 export const loginWithPassword = async (account: string, password: string, role?: UserRole): Promise<User> => {
   if (!BASE) {
-    // 无后端地址时，退回到本地模拟用户
+    // ... local mock implementation ...
     const users = getStore<User[]>(DB_KEYS.USERS, []) || []
-    // 优先根据传入的角色查找，默认为 CUSTOMER
     const targetRole = role || UserRole.CUSTOMER
     let user = users.find(u => u.role === targetRole)
     if (!user) {
@@ -56,16 +55,48 @@ export const loginWithPassword = async (account: string, password: string, role?
     setStore(DB_KEYS.CURRENT_USER, user)
     return user
   }
-  const data = await request<{ user: User; token: string }>(`${BASE}/auth/login`, {
+  // 远程登录
+  const res = await request<{ success: boolean; token: string; user: any; message?: string }>(`${BASE}/api/login`, {
     method: 'POST',
-    data: { account, password, role }
+    data: { username: account, password } // 后端接收 username
   })
-  setStore(DB_KEYS.AUTH_TOKEN, data.token)
-  setStore(DB_KEYS.CURRENT_USER, data.user)
-  return data.user
+  
+  // 转换后端用户格式到前端格式
+  const backendUser = res.user
+  const user: User = {
+    id: backendUser.id,
+    name: backendUser.username, // 后端用 username
+    avatar: 'https://picsum.photos/100/100', // 后端无头像，暂用占位
+    role: backendUser.role === 'staff' ? UserRole.TECHNICIAN : UserRole.CUSTOMER, // 角色映射
+    phone: backendUser.phone,
+    rating: 5.0
+  }
+
+  setStore(DB_KEYS.AUTH_TOKEN, res.token)
+  setStore(DB_KEYS.CURRENT_USER, user)
+  return user
 }
 
-// 登录：按角色返回用户信息（远程走后端，本地走模拟）
+// 员工接单
+export const takeOrder = async (orderId: string): Promise<void> => {
+    if (isRemote) {
+        await request(`${BASE}/api/orders/${orderId}/take`, { method: 'POST' })
+        return
+    }
+    // local implementation...
+}
+
+// 辅助函数：状态映射
+const mapBackendStatusToFrontend = (status: string): OrderStatus => {
+  switch (status) {
+    case 'pending': return OrderStatus.PENDING
+    case 'doing': return OrderStatus.IN_PROGRESS
+    case 'completed': return OrderStatus.COMPLETED
+    case 'cancelled': return OrderStatus.CANCELLED
+    default: return OrderStatus.PENDING
+  }
+}
+
 export const loginUser = async (role: UserRole): Promise<User> => {
   if (isRemote) {
     const user = await request<User>(`${BASE}/auth/login-mock?role=${encodeURIComponent(role)}`, { method: 'GET' })
@@ -119,16 +150,33 @@ export const getOrders = async (user: User): Promise<Order[]> => {
 // 创建订单：提交表单生成订单
 export const createOrder = async (orderData: Partial<Order>): Promise<Order> => {
   if (isRemote) {
+    // 后端 /api/orders 接收: location, phone, description, image_url
+    // 对应前端: address, customerPhone, description, images
     const payload = {
-      customerId: orderData.customerId,
-      customerName: orderData.customerName,
-      customerPhone: orderData.customerPhone,
-      category: orderData.category || '其他',
-      address: orderData.address,
+      location: orderData.address,
+      phone: orderData.customerPhone,
       description: orderData.description,
-      serviceType: orderData.serviceType
+      image_url: orderData.images && orderData.images.length > 0 ? orderData.images[0] : '' // 后端目前只接收一个 image_url
     }
-    return await request<Order>(`${BASE}/orders`, { method: 'POST', data: payload })
+    const res = await request<{ success: boolean; message: string; order_no: string }>(`${BASE}/api/orders`, { method: 'POST', data: payload })
+    
+    // 构造一个前端 Order 对象返回 (后端只返回 order_no)
+    const now = Date.now()
+    const newOrder: Order = {
+      id: res.order_no, // 使用 order_no 作为 ID
+      customerId: '', // 无法从响应获取，暂时留空或从 currentUser 获取
+      customerName: '',
+      customerPhone: orderData.customerPhone || '',
+      category: orderData.category || '其他',
+      address: orderData.address || '',
+      description: orderData.description || '',
+      serviceType: orderData.serviceType || ServiceType.HOME,
+      status: OrderStatus.PENDING,
+      createdAt: now,
+      updatedAt: now,
+      images: orderData.images || []
+    }
+    return newOrder
   }
   const orders: Order[] = getStore<Order[]>(DB_KEYS.ORDERS, []) || []
   const now = Date.now()
@@ -154,8 +202,19 @@ export const createOrder = async (orderData: Partial<Order>): Promise<Order> => 
 // 更新订单状态：接单/开始维修/完成/取消
 export const updateOrderStatus = async (orderId: string, status: OrderStatus, techId?: string, techName?: string): Promise<Order> => {
   if (isRemote) {
-    const payload = { status, techId, techName }
-    return await request<Order>(`${BASE}/orders/${encodeURIComponent(orderId)}/status`, { method: 'PATCH', data: payload })
+    // 后端目前只实现了接单 (/take)，其他状态更新暂无明确接口
+    // 如果是接单，调用 takeOrder
+    if (status === OrderStatus.ACCEPTED || status === OrderStatus.IN_PROGRESS) {
+        await takeOrder(orderId)
+        // 重新获取订单信息返回
+        // 由于后端没有返回更新后的订单，我们只能构造一个假的或者重新 fetch
+        // 这里简单构造返回
+        const order = await getOrderById(orderId)
+        order.status = status
+        return order
+    }
+    // 其他状态暂不支持或需要后端扩展
+    throw new Error('Remote update status not fully implemented')
   }
   const orders: Order[] = getStore<Order[]>(DB_KEYS.ORDERS, []) || []
   const index = orders.findIndex(o => o.id === orderId)
