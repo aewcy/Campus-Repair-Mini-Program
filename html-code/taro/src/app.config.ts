@@ -19,9 +19,24 @@ export default {
     selectedColor: '#16a34a',
     backgroundColor: '#ffffff',
     list: [
-      { pagePath: 'pages/home/index', text: '首页' },
-      { pagePath: 'pages/create-order/index', text: '下单' },
-      { pagePath: 'pages/profile/index', text: '我的' }
+      {
+        pagePath: 'pages/home/index',
+        text: '首页',
+        iconPath: 'assets/tabbar/home.svg',
+        selectedIconPath: 'assets/tabbar/home-active.svg'
+      },
+      {
+        pagePath: 'pages/create-order/index',
+        text: '下单',
+        iconPath: 'assets/tabbar/plus.svg',
+        selectedIconPath: 'assets/tabbar/plus-active.svg'
+      },
+      {
+        pagePath: 'pages/profile/index',
+        text: '我的',
+        iconPath: 'assets/tabbar/user.svg',
+        selectedIconPath: 'assets/tabbar/user-active.svg'
+      }
     ]
   }
 }
