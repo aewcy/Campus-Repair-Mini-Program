@@ -15,11 +15,28 @@ const config = {
   compiler: 'webpack5',
   plugins: ['@tarojs/plugin-platform-weapp', '@tarojs/plugin-framework-react'],
   alias: {
+    '@/types': path.resolve(__dirname, '..', '..', 'types.ts'),
     '@': path.resolve(__dirname, '..', 'src')
   },
   defineConstants: {
     'process.env.VITE_API_BASE_URL': JSON.stringify(process.env.VITE_API_BASE_URL || ''),
     'process.env.VITE_API_TOKEN': JSON.stringify(process.env.VITE_API_TOKEN || '')
+  },
+  mini: {
+    webpackChain(chain) {
+      chain.module
+        .rule('script')
+        .include
+        .add(path.resolve(__dirname, '..', '..', 'types.ts'))
+    }
+  },
+  h5: {
+    webpackChain(chain) {
+      chain.module
+        .rule('script')
+        .include
+        .add(path.resolve(__dirname, '..', '..', 'types.ts'))
+    }
   },
   babel: {
     presets: [

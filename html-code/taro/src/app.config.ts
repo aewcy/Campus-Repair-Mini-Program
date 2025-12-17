@@ -1,9 +1,9 @@
 // 应用配置：声明页面路由与 tabBar
 export default {
   pages: [
+    'pages/home/index',
     'pages/login/index',
     'pages/register/index',
-    'pages/home/index',
     'pages/create-order/index',
     'pages/order-detail/index',
     'pages/profile/index',

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { View, Text, Input, Textarea, Button } from '@tarojs/components'
 import Taro from '@tarojs/taro'
-import { getOrderById, updateOrderStatus, updateOrderInfo } from '../../services/api'
-import { Order, OrderStatus } from '@/types'
+import { getOrderById, updateOrderStatus, updateOrderInfo, rateOrder, getCurrentUser } from '../../services/api'
+import { Order, OrderStatus, UserRole } from '@/types'
 
 const OrderDetailPage = () => {
   const [order, setOrder] = useState<Order | null>(null)
@@ -10,6 +10,8 @@ const OrderDetailPage = () => {
   const [address, setAddress] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
+  const [rating, setRating] = useState(5)
+  const [comment, setComment] = useState('')
 
   const load = async () => {
     const params = Taro.getCurrentInstance().router?.params || {}
