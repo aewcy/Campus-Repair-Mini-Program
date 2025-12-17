@@ -22,20 +22,20 @@ export default {
       {
         pagePath: 'pages/home/index',
         text: '首页',
-        iconPath: 'assets/tabbar/home.svg',
-        selectedIconPath: 'assets/tabbar/home-active.svg'
+        iconPath: 'assets/tabbar/home.png',
+        selectedIconPath: 'assets/tabbar/home-active.png'
       },
       {
         pagePath: 'pages/create-order/index',
         text: '下单',
-        iconPath: 'assets/tabbar/plus.svg',
-        selectedIconPath: 'assets/tabbar/plus-active.svg'
+        iconPath: 'assets/tabbar/plus.png',
+        selectedIconPath: 'assets/tabbar/plus-active.png'
       },
       {
         pagePath: 'pages/profile/index',
         text: '我的',
-        iconPath: 'assets/tabbar/user.svg',
-        selectedIconPath: 'assets/tabbar/user-active.svg'
+        iconPath: 'assets/tabbar/user.png',
+        selectedIconPath: 'assets/tabbar/user-active.png'
       }
     ]
   }
