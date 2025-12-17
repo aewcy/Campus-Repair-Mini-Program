@@ -81,7 +81,7 @@ const OrderDetailPage = () => {
       </View>
       <View style={{ marginTop: 12 }}>
         <Text>联系电话</Text>
-        <Input placeholder='请输入联系手机号' value={phone} onInput={(e) => setPhone(e.detail.value)} />
+        <Input placeholder='请输入联系手机号' type='number' maxLength={11} value={phone} onInput={(e) => setPhone(e.detail.value)} />
       </View>
       <View style={{ marginTop: 12 }}>
         <Text>地址</Text>

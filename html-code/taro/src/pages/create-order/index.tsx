@@ -68,7 +68,7 @@ const CreateOrderPage = () => {
       </View>
       <View style={{ marginTop: 12 }}>
         <Text>手机号</Text>
-        <Input placeholder='请输入联系手机号' value={primaryPhone} onInput={(e) => setPrimaryPhone(e.detail.value)} />
+        <Input placeholder='请输入联系手机号' type='number' maxLength={11} value={primaryPhone} onInput={(e) => setPrimaryPhone(e.detail.value)} />
       </View>
       <View style={{ marginTop: 12 }}>
         <Text>地址</Text>

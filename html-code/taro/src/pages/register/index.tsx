@@ -44,7 +44,7 @@ const RegisterPage = () => {
       </View>
       <View style={{ marginTop: 16 }}>
         <Text>手机号</Text>
-        <Input placeholder='请输入手机号' value={phone} onInput={(e) => setPhone(e.detail.value)} />
+        <Input placeholder='请输入手机号' type='number' maxLength={11} value={phone} onInput={(e) => setPhone(e.detail.value)} />
       </View>
       <Button style={{ marginTop: 24 }} type='primary' onClick={handleRegister}>
         注册
