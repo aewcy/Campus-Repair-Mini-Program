@@ -91,9 +91,28 @@ const mapBackendStatusToFrontend = (status: string): OrderStatus => {
   switch (status) {
     case 'pending': return OrderStatus.PENDING
     case 'doing': return OrderStatus.IN_PROGRESS
+    case 'done': return OrderStatus.COMPLETED
     case 'completed': return OrderStatus.COMPLETED
     case 'cancelled': return OrderStatus.CANCELLED
     default: return OrderStatus.PENDING
+  }
+}
+
+const mapBackendOrderToFrontend = (o: any): Order => {
+  const now = Date.now()
+  return {
+    id: o?.id ?? o?.order_no ?? `ord_${now}`,
+    customerId: o?.customer_id ?? '',
+    customerName: o?.customer_name ?? '',
+    customerPhone: o?.phone ?? o?.customer_phone ?? '',
+    category: o?.category ?? '其他',
+    address: o?.location ?? o?.address ?? '',
+    description: o?.description ?? '',
+    serviceType: o?.service_type ?? ServiceType.HOME,
+    status: mapBackendStatusToFrontend(o?.status ?? 'pending'),
+    createdAt: typeof o?.created_at === 'number' ? o.created_at : (o?.created_at ? Date.parse(o.created_at) : now),
+    updatedAt: typeof o?.updated_at === 'number' ? o.updated_at : (o?.updated_at ? Date.parse(o.updated_at) : now),
+    images: Array.isArray(o?.images) ? o.images : (o?.image_url ? [o.image_url] : [])
   }
 }
 
@@ -136,7 +155,13 @@ export const getCurrentUser = (): User | null => {
 // 获取订单列表：按角色返回不同视图
 export const getOrders = async (user: User): Promise<Order[]> => {
   if (isRemote) {
-    return await request<Order[]>(`${BASE}/orders?userId=${encodeURIComponent(user.id)}&role=${encodeURIComponent(user.role)}`, { method: 'GET' })
+    if (user.role === UserRole.TECHNICIAN) {
+      const res = await request<{ success: boolean; data: any[] }>(`${BASE}/api/orders`, { method: 'GET' })
+      return (res?.data || []).map(mapBackendOrderToFrontend)
+    } else {
+      const res = await request<{ success: boolean; data: any[] }>(`${BASE}/api/orders/my`, { method: 'GET' })
+      return (res?.data || []).map(mapBackendOrderToFrontend)
+    }
   }
   const orders: Order[] = getStore<Order[]>(DB_KEYS.ORDERS, []) || []
   if (user.role === UserRole.CUSTOMER) {
@@ -150,8 +175,6 @@ export const getOrders = async (user: User): Promise<Order[]> => {
 // 创建订单：提交表单生成订单
 export const createOrder = async (orderData: Partial<Order>): Promise<Order> => {
   if (isRemote) {
-    // 后端 /api/orders 接收: location, phone, description, image_url
-    // 对应前端: address, customerPhone, description, images
     const payload = {
       location: orderData.address,
       phone: orderData.customerPhone,
@@ -159,12 +182,10 @@ export const createOrder = async (orderData: Partial<Order>): Promise<Order> => 
       image_url: orderData.images && orderData.images.length > 0 ? orderData.images[0] : '' // 后端目前只接收一个 image_url
     }
     const res = await request<{ success: boolean; message: string; order_no: string }>(`${BASE}/api/orders`, { method: 'POST', data: payload })
-    
-    // 构造一个前端 Order 对象返回 (后端只返回 order_no)
     const now = Date.now()
     const newOrder: Order = {
       id: res.order_no, // 使用 order_no 作为 ID
-      customerId: '', // 无法从响应获取，暂时留空或从 currentUser 获取
+      customerId: '',
       customerName: '',
       customerPhone: orderData.customerPhone || '',
       category: orderData.category || '其他',
@@ -234,7 +255,8 @@ export const updateOrderStatus = async (orderId: string, status: OrderStatus, te
 // 获取订单详情
 export const getOrderById = async (orderId: string): Promise<Order> => {
   if (isRemote) {
-    return await request<Order>(`${BASE}/orders/${encodeURIComponent(orderId)}`, { method: 'GET' })
+    const res = await request<{ success: boolean; data: any }>(`${BASE}/api/orders/${encodeURIComponent(orderId)}`, { method: 'GET' })
+    return mapBackendOrderToFrontend(res?.data)
   }
   const orders: Order[] = getStore<Order[]>(DB_KEYS.ORDERS, []) || []
   const order = orders.find(o => o.id === orderId)
@@ -245,7 +267,7 @@ export const getOrderById = async (orderId: string): Promise<Order> => {
 // 修改订单信息：支持更新地址、描述、联系电话
 export const updateOrderInfo = async (orderId: string, patch: Partial<Pick<Order, 'address' | 'description' | 'customerPhone'>>): Promise<Order> => {
   if (isRemote) {
-    return await request<Order>(`${BASE}/orders/${encodeURIComponent(orderId)}`, { method: 'PATCH', data: patch })
+    throw new Error('Remote update order info not implemented')
   }
   const orders: Order[] = getStore<Order[]>(DB_KEYS.ORDERS, []) || []
   const index = orders.findIndex(o => o.id === orderId)
@@ -263,8 +285,7 @@ export const updateOrderInfo = async (orderId: string, patch: Partial<Pick<Order
 // 评价订单：支持双方互评
 export const rateOrder = async (orderId: string, rating: number, comment: string, type: 'CUSTOMER_TO_TECH' | 'TECH_TO_CUSTOMER'): Promise<Order> => {
   if (isRemote) {
-    const payload = { rating, comment, type }
-    return await request<Order>(`${BASE}/orders/${encodeURIComponent(orderId)}/rate`, { method: 'POST', data: payload })
+    throw new Error('Remote rate order not implemented')
   }
   const orders: Order[] = getStore<Order[]>(DB_KEYS.ORDERS, []) || []
   const index = orders.findIndex(o => o.id === orderId)
@@ -307,17 +328,52 @@ export const updateUserPhone = async (userId: string, phone: string): Promise<Us
 // 用户注册
 export const registerUser = async (payload: { account: string; password: string; name: string; phone: string }): Promise<User> => {
   if (isRemote) {
-    const data = await request<{ user: User; token?: string }>(`${BASE}/auth/register`, { method: 'POST', data: payload })
-    if (data.token) setStore(DB_KEYS.AUTH_TOKEN, data.token)
-    setStore(DB_KEYS.CURRENT_USER, data.user)
+    const data = await request<{ success: boolean; message?: string; user?: any; token?: string }>(`${BASE}/api/register`, { 
+      method: 'POST', 
+      data: { 
+        username: payload.account, 
+        password: payload.password, 
+        name: payload.name, 
+        phone: payload.phone 
+      } 
+    })
+    let user: User | null = null
+    if (data.user) {
+      const backendUser = data.user
+      if (data.token) setStore(DB_KEYS.AUTH_TOKEN, data.token)
+      user = {
+        id: backendUser.id,
+        name: backendUser.username || backendUser.name || payload.name,
+        avatar: backendUser.avatar || 'https://picsum.photos/100/100',
+        role: backendUser.role === 'staff' ? UserRole.TECHNICIAN : UserRole.CUSTOMER,
+        phone: backendUser.phone || payload.phone,
+        rating: 5.0
+      }
+    } else {
+      const loginRes = await request<{ success: boolean; token: string; user: any }>(`${BASE}/api/login`, {
+        method: 'POST',
+        data: { username: payload.account, password: payload.password }
+      })
+      setStore(DB_KEYS.AUTH_TOKEN, loginRes.token)
+      const backendUser = loginRes.user
+      user = {
+        id: backendUser.id,
+        name: backendUser.username || payload.name,
+        avatar: 'https://picsum.photos/100/100',
+        role: backendUser.role === 'staff' ? UserRole.TECHNICIAN : UserRole.CUSTOMER,
+        phone: backendUser.phone || payload.phone,
+        rating: 5.0
+      }
+    }
+    setStore(DB_KEYS.CURRENT_USER, user)
     // 同步到本地列表以便本地模式切换
     const users: User[] = getStore<User[]>(DB_KEYS.USERS, []) || []
-    const idx = users.findIndex(u => u.id === data.user.id)
+    const idx = users.findIndex(u => u.id === (user as User).id)
     if (idx === -1) {
-      users.push(data.user)
+      users.push(user as User)
       setStore(DB_KEYS.USERS, users)
     }
-    return data.user
+    return user as User
   }
   const users: User[] = getStore<User[]>(DB_KEYS.USERS, []) || []
   const newUser: User = {
