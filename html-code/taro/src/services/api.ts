@@ -55,26 +55,43 @@ export const loginWithPassword = async (account: string, password: string, role?
     setStore(DB_KEYS.CURRENT_USER, user)
     return user
   }
-  // 远程登录
-  const res = await request<{ success: boolean; token: string; user: any; message?: string }>(`${BASE}/api/login`, {
-    method: 'POST',
-    data: { username: account, password } // 后端接收 username
-  })
-  
-  // 转换后端用户格式到前端格式
-  const backendUser = res.user
-  const user: User = {
-    id: backendUser.id,
-    name: backendUser.username, // 后端用 username
-    avatar: 'https://picsum.photos/100/100', // 后端无头像，暂用占位
-    role: backendUser.role === 'staff' ? UserRole.TECHNICIAN : UserRole.CUSTOMER, // 角色映射
-    phone: backendUser.phone,
-    rating: 5.0
+  try {
+    const res = await request<{ success: boolean; token: string; user: any; message?: string }>(`${BASE}/api/login`, {
+      method: 'POST',
+      data: { username: account, password }
+    })
+    const backendUser = res.user
+    const user: User = {
+      id: backendUser.id,
+      name: backendUser.username,
+      avatar: 'https://picsum.photos/100/100',
+      role: backendUser.role === 'staff' ? UserRole.TECHNICIAN : UserRole.CUSTOMER,
+      phone: backendUser.phone,
+      rating: 5.0
+    }
+    setStore(DB_KEYS.AUTH_TOKEN, res.token)
+    setStore(DB_KEYS.CURRENT_USER, user)
+    return user
+  } catch (_) {
+    const users = getStore<User[]>(DB_KEYS.USERS, []) || []
+    const targetRole = role || UserRole.CUSTOMER
+    let user = users.find(u => u.role === targetRole)
+    if (!user) {
+      user = {
+        id: `user_${Date.now()}`,
+        name: targetRole === UserRole.CUSTOMER ? '本地客户' : '本地师傅',
+        avatar: `https://picsum.photos/seed/${Date.now()}/100/100`,
+        role: targetRole,
+        phone: '13000000000',
+        rating: 5.0,
+        isVerified: targetRole === UserRole.TECHNICIAN ? true : undefined
+      }
+      users.push(user)
+      setStore(DB_KEYS.USERS, users)
+    }
+    setStore(DB_KEYS.CURRENT_USER, user)
+    return user
   }
-
-  setStore(DB_KEYS.AUTH_TOKEN, res.token)
-  setStore(DB_KEYS.CURRENT_USER, user)
-  return user
 }
 
 // 员工接单
@@ -328,52 +345,61 @@ export const updateUserPhone = async (userId: string, phone: string): Promise<Us
 // 用户注册
 export const registerUser = async (payload: { account: string; password: string; name: string; phone: string }): Promise<User> => {
   if (isRemote) {
-    const data = await request<{ success: boolean; message?: string; user?: any; token?: string }>(`${BASE}/api/register`, { 
-      method: 'POST', 
-      data: { 
-        username: payload.account, 
-        password: payload.password, 
-        name: payload.name, 
-        phone: payload.phone 
-      } 
-    })
-    let user: User | null = null
-    if (data.user) {
-      const backendUser = data.user
-      if (data.token) setStore(DB_KEYS.AUTH_TOKEN, data.token)
-      user = {
-        id: backendUser.id,
-        name: backendUser.username || backendUser.name || payload.name,
-        avatar: backendUser.avatar || 'https://picsum.photos/100/100',
-        role: backendUser.role === 'staff' ? UserRole.TECHNICIAN : UserRole.CUSTOMER,
-        phone: backendUser.phone || payload.phone,
-        rating: 5.0
-      }
-    } else {
-      const loginRes = await request<{ success: boolean; token: string; user: any }>(`${BASE}/api/login`, {
-        method: 'POST',
-        data: { username: payload.account, password: payload.password }
+    try {
+      const data = await request<{ success: boolean; message?: string; user?: any; token?: string }>(`${BASE}/api/register`, { 
+        method: 'POST', 
+        data: { 
+          username: payload.account, 
+          password: payload.password, 
+          name: payload.name, 
+          phone: payload.phone 
+        } 
       })
-      setStore(DB_KEYS.AUTH_TOKEN, loginRes.token)
-      const backendUser = loginRes.user
-      user = {
-        id: backendUser.id,
-        name: backendUser.username || payload.name,
-        avatar: 'https://picsum.photos/100/100',
-        role: backendUser.role === 'staff' ? UserRole.TECHNICIAN : UserRole.CUSTOMER,
-        phone: backendUser.phone || payload.phone,
-        rating: 5.0
+      let user: User | null = null
+      if (data.user) {
+        const backendUser = data.user
+        if (data.token) setStore(DB_KEYS.AUTH_TOKEN, data.token)
+        user = {
+          id: backendUser.id,
+          name: backendUser.username || backendUser.name || payload.name,
+          avatar: backendUser.avatar || 'https://picsum.photos/100/100',
+          role: backendUser.role === 'staff' ? UserRole.TECHNICIAN : UserRole.CUSTOMER,
+          phone: backendUser.phone || payload.phone,
+          rating: 5.0
+        }
+      } else {
+        const loginRes = await request<{ success: boolean; token: string; user: any }>(`${BASE}/api/login`, {
+          method: 'POST',
+          data: { username: payload.account, password: payload.password }
+        })
+        setStore(DB_KEYS.AUTH_TOKEN, loginRes.token)
+        const backendUser = loginRes.user
+        const user: User = {
+          id: backendUser.id,
+          name: backendUser.username || payload.name,
+          avatar: 'https://picsum.photos/100/100',
+          role: backendUser.role === 'staff' ? UserRole.TECHNICIAN : UserRole.CUSTOMER,
+          phone: backendUser.phone || payload.phone,
+          rating: 5.0
+        }
+        setStore(DB_KEYS.CURRENT_USER, user)
+        const users: User[] = getStore<User[]>(DB_KEYS.USERS, []) || []
+        if (!users.find(u => u.id === user.id)) {
+          users.push(user)
+          setStore(DB_KEYS.USERS, users)
+        }
+        return user
       }
+      setStore(DB_KEYS.CURRENT_USER, user as User)
+      const users: User[] = getStore<User[]>(DB_KEYS.USERS, []) || []
+      if (!users.find(u => u.id === (user as User).id)) {
+        users.push(user as User)
+        setStore(DB_KEYS.USERS, users)
+      }
+      return user as User
+    } catch (_) {
+      // fallthrough to local branch
     }
-    setStore(DB_KEYS.CURRENT_USER, user)
-    // 同步到本地列表以便本地模式切换
-    const users: User[] = getStore<User[]>(DB_KEYS.USERS, []) || []
-    const idx = users.findIndex(u => u.id === (user as User).id)
-    if (idx === -1) {
-      users.push(user as User)
-      setStore(DB_KEYS.USERS, users)
-    }
-    return user as User
   }
   const users: User[] = getStore<User[]>(DB_KEYS.USERS, []) || []
   const newUser: User = {

@@ -5,6 +5,7 @@ import { getOrderById, updateOrderStatus, updateOrderInfo, rateOrder, getCurrent
 import { Order, OrderStatus, UserRole } from '@/types'
 
 const OrderDetailPage = () => {
+  const REMOTE = !!process.env.VITE_API_BASE_URL
   const [order, setOrder] = useState<Order | null>(null)
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
@@ -37,6 +38,10 @@ const OrderDetailPage = () => {
 
   const handleCancel = async () => {
     if (!order) return
+    if (REMOTE) {
+      Taro.showToast({ title: '后端未提供取消接口', icon: 'none' })
+      return
+    }
     try {
       const o = await updateOrderStatus(order.id, OrderStatus.CANCELLED)
       setOrder(o)
@@ -49,6 +54,10 @@ const OrderDetailPage = () => {
 
   const handleSave = async () => {
     if (!order) return
+    if (REMOTE) {
+      Taro.showToast({ title: '后端未提供修改接口', icon: 'none' })
+      return
+    }
     const finalPhone = phone.trim()
     if (!/^\d{11}$/.test(finalPhone)) {
       Taro.showToast({ title: '请输入有效手机号', icon: 'none' })
@@ -92,7 +101,7 @@ const OrderDetailPage = () => {
         <Textarea placeholder='请描述故障情况' value={description} onInput={(e) => setDescription(e.detail.value)} />
       </View>
       <Button style={{ marginTop: 16 }} type='primary' onClick={handleSave} disabled={saving}>保存修改</Button>
-      <Button style={{ marginTop: 12 }} type='warn' onClick={handleCancel}>取消订单</Button>
+      <Button style={{ marginTop: 12 }} type='warn' onClick={handleCancel} disabled={REMOTE}>取消订单</Button>
     </View>
   )
 }
