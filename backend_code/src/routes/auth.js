@@ -37,11 +37,19 @@ router.post(
       }
 
       const hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-      await db.query(
+      const [result] = await db.query(
         "INSERT INTO jdwx_users (username, password, role, phone, created_at) VALUES (?, ?, ?, ?, NOW())",
         [username, hash, role, phone]
       );
-      return res.json({ success: true, message: "注册成功" });
+      
+      // 获取新创建的用户
+      const [newUserRows] = await db.query("SELECT * FROM jdwx_users WHERE id = ?", [result.insertId]);
+      const newUser = newUserRows[0];
+      
+      // 生成 JWT token
+      const token = jwt.sign({ id: newUser.id, username: newUser.username, role: newUser.role }, JWT_SECRET, { expiresIn: JWT_EXPIRES });
+      
+      return res.json({ success: true, user: safeUser(newUser), token });
     } catch (err) {
       return handleError(res, err, 500, "注册失败");
     }

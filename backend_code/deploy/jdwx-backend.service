@@ -1,0 +1,26 @@
+[Unit]
+Description=JDWX Backend Server
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/jdwx_backend_server
+EnvironmentFile=/opt/jdwx_backend_server/.env
+ExecStart=/usr/bin/node /opt/jdwx_backend_server/src/server.js
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jdwx-backend
+
+# 安全设置
+NoNewPrivileges=true
+PrivateTmp=true
+
+# 资源限制
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

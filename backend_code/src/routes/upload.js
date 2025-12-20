@@ -1,4 +1,6 @@
 const express = require("express");
+const fs = require("fs");
+const path = require("path");
 const { upload } = require("../config/multer");
 const { auth } = require("../middlewares/auth");
 
@@ -12,8 +14,6 @@ router.post("/", auth, upload.single("file"), (req, res) => {
   }
   const mimetype = req.file.mimetype;
   if (!UPLOAD_WHITELIST.includes(mimetype)) {
-    const fs = require("fs");
-    const path = require("path");
     const filePath = path.join(req.file.destination, req.file.filename);
     fs.unlink(filePath, () => {});
     return res.status(400).json({ success: false, message: "不允许的文件类型" });
