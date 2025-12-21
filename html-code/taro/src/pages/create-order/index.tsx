@@ -55,28 +55,28 @@ const CreateOrderPage = () => {
       <Text style={{ fontSize: 18, fontWeight: 600 }}>发布需求</Text>
       <View style={{ marginTop: 12 }}>
         <Text>维修类别</Text>
-        <Picker mode='selector' range={CATEGORIES} value={categoryIdx} onChange={(e) => setCategoryIdx(Number(e.detail.value))}>
+        <Picker mode='selector' range={CATEGORIES} value={categoryIdx} onChange={(e: any) => setCategoryIdx(Number(e.detail.value))}>
           <View style={{ padding: 12, border: '1px solid #eee', marginTop: 6 }}>{CATEGORIES[categoryIdx]}</View>
         </Picker>
       </View>
       <View style={{ marginTop: 12 }}>
         <Text>服务类型</Text>
-        <RadioGroup onChange={(e) => setServiceType(e.detail.value as ServiceType)}>
+        <RadioGroup onChange={(e: any) => setServiceType(e.detail.value as ServiceType)}>
           <Radio value={ServiceType.HOME} checked={serviceType === ServiceType.HOME}>上门服务</Radio>
           <Radio value={ServiceType.SHOP} checked={serviceType === ServiceType.SHOP} style={{ marginLeft: 12 }}>到店维修</Radio>
         </RadioGroup>
       </View>
       <View style={{ marginTop: 12 }}>
         <Text>手机号</Text>
-        <Input placeholder='请输入联系手机号' type='number' maxLength={11} value={primaryPhone} onInput={(e) => setPrimaryPhone(e.detail.value)} />
+        <Input placeholder='请输入联系手机号' type='number' maxlength={11} value={primaryPhone} onInput={(e: any) => setPrimaryPhone(e.detail.value)} />
       </View>
       <View style={{ marginTop: 12 }}>
         <Text>地址</Text>
-        <Input placeholder='请输入详细地址' value={address} onInput={(e) => setAddress(e.detail.value)} />
+        <Input placeholder='请输入详细地址' value={address} onInput={(e: any) => setAddress(e.detail.value)} />
       </View>
       <View style={{ marginTop: 12 }}>
         <Text>问题描述</Text>
-        <Textarea placeholder='请描述故障情况' value={description} onInput={(e) => setDescription(e.detail.value)} />
+        <Textarea placeholder='请描述故障情况' value={description} onInput={(e: any) => setDescription(e.detail.value)} />
       </View>
       <Button style={{ marginTop: 20 }} type='primary' onClick={handleSubmit}>提交</Button>
     </View>

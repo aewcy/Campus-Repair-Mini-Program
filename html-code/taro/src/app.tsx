@@ -4,7 +4,7 @@ import React, { useEffect } from 'react'
 import Taro from '@tarojs/taro'
 
 // 组件：顶层应用，包裹各页面
-const App = (props) => {
+const App = (props: React.PropsWithChildren) => {
   useEffect(() => {
     // 示例：获取系统信息（此处仅做占位）
     Taro.getSystemInfo().then(() => {})

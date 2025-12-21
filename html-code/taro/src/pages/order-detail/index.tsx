@@ -5,14 +5,11 @@ import { getOrderById, updateOrderStatus, updateOrderInfo, rateOrder, getCurrent
 import { Order, OrderStatus, UserRole } from '@/types'
 
 const OrderDetailPage = () => {
-  const REMOTE = !!process.env.VITE_API_BASE_URL
   const [order, setOrder] = useState<Order | null>(null)
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
-  const [rating, setRating] = useState(5)
-  const [comment, setComment] = useState('')
 
   const load = async () => {
     const params = Taro.getCurrentInstance().router?.params || {}
@@ -38,8 +35,13 @@ const OrderDetailPage = () => {
 
   const handleCancel = async () => {
     if (!order) return
-    if (REMOTE) {
-      Taro.showToast({ title: '后端未提供取消接口', icon: 'none' })
+    const u = getCurrentUser()
+    if (!u) {
+      Taro.showToast({ title: '请先登录', icon: 'none' })
+      return
+    }
+    if (u.role !== UserRole.CUSTOMER) {
+      Taro.showToast({ title: '仅客户可取消订单', icon: 'none' })
       return
     }
     try {
@@ -54,8 +56,13 @@ const OrderDetailPage = () => {
 
   const handleSave = async () => {
     if (!order) return
-    if (REMOTE) {
-      Taro.showToast({ title: '后端未提供修改接口', icon: 'none' })
+    const u = getCurrentUser()
+    if (!u) {
+      Taro.showToast({ title: '请先登录', icon: 'none' })
+      return
+    }
+    if (u.role !== UserRole.CUSTOMER) {
+      Taro.showToast({ title: '仅客户可修改订单', icon: 'none' })
       return
     }
     const finalPhone = phone.trim()
@@ -78,6 +85,7 @@ const OrderDetailPage = () => {
   if (!order) {
     return <View style={{ padding: 16 }}><Text>加载中...</Text></View>
   }
+  const isClosed = order.status === OrderStatus.CANCELLED || order.status === OrderStatus.COMPLETED
 
   return (
     <View style={{ padding: 16 }}>
@@ -90,18 +98,18 @@ const OrderDetailPage = () => {
       </View>
       <View style={{ marginTop: 12 }}>
         <Text>联系电话</Text>
-        <Input placeholder='请输入联系手机号' type='number' maxLength={11} value={phone} onInput={(e) => setPhone(e.detail.value)} />
+        <Input placeholder='请输入联系手机号' type='number' maxlength={11} value={phone} onInput={(e: any) => setPhone(e.detail.value)} />
       </View>
       <View style={{ marginTop: 12 }}>
         <Text>地址</Text>
-        <Input placeholder='请输入详细地址' value={address} onInput={(e) => setAddress(e.detail.value)} />
+        <Input placeholder='请输入详细地址' value={address} onInput={(e: any) => setAddress(e.detail.value)} />
       </View>
       <View style={{ marginTop: 12 }}>
         <Text>问题描述</Text>
-        <Textarea placeholder='请描述故障情况' value={description} onInput={(e) => setDescription(e.detail.value)} />
+        <Textarea placeholder='请描述故障情况' value={description} onInput={(e: any) => setDescription(e.detail.value)} />
       </View>
-      <Button style={{ marginTop: 16 }} type='primary' onClick={handleSave} disabled={saving}>保存修改</Button>
-      <Button style={{ marginTop: 12 }} type='warn' onClick={handleCancel} disabled={REMOTE}>取消订单</Button>
+      <Button style={{ marginTop: 16 }} type='primary' onClick={handleSave} disabled={saving || isClosed}>保存修改</Button>
+      <Button style={{ marginTop: 12 }} type='warn' onClick={handleCancel} disabled={isClosed}>取消订单</Button>
     </View>
   )
 }

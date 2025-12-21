@@ -35,7 +35,7 @@ const LoginPage = () => {
         <Text>选择身份</Text>
         <RadioGroup 
           style={{ display: 'flex', marginTop: 8 }} 
-          onChange={(e) => setRole(e.detail.value as UserRole)}
+          onChange={(e: any) => setRole(e.detail.value as UserRole)}
         >
           <View style={{ marginRight: 20 }}>
             <Radio value={UserRole.CUSTOMER} checked={role === UserRole.CUSTOMER}>我是客户</Radio>
@@ -51,7 +51,7 @@ const LoginPage = () => {
         <Input
           placeholder='请输入账号'
           value={account}
-          onInput={(e) => setAccount(e.detail.value)}
+          onInput={(e: any) => setAccount(e.detail.value)}
         />
       </View>
       <View style={{ marginTop: 16 }}>
@@ -60,7 +60,7 @@ const LoginPage = () => {
           placeholder='请输入密码'
           password
           value={password}
-          onInput={(e) => setPassword(e.detail.value)}
+          onInput={(e: any) => setPassword(e.detail.value)}
         />
       </View>
       <Button style={{ marginTop: 24 }} type='primary' onClick={handleLogin}>

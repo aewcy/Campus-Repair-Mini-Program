@@ -18,7 +18,7 @@ const DB_KEYS = {
 }
 
 // 请求封装：统一设置头信息与错误处理
-const request = async <T>(url: string, options: Taro.request.Option = {}): Promise<T> => {
+const request = async <T>(url: string, options: Omit<Taro.request.Option<any, any>, 'url'> = {}): Promise<T> => {
   const headers = {
     'Content-Type': 'application/json',
     ...(API_TOKEN ? { Authorization: API_TOKEN } : {}),
@@ -27,7 +27,9 @@ const request = async <T>(url: string, options: Taro.request.Option = {}): Promi
   }
   const res = await Taro.request<T>({ url, ...options, header: headers })
   if (res.statusCode < 200 || res.statusCode >= 300) {
-    throw new Error(`request failed: ${res.statusCode}`)
+    const data: any = res.data as any
+    const message = data?.message || data?.error || `request failed: ${res.statusCode}`
+    throw new Error(message)
   }
   return res.data as T
 }
@@ -55,43 +57,26 @@ export const loginWithPassword = async (account: string, password: string, role?
     setStore(DB_KEYS.CURRENT_USER, user)
     return user
   }
-  try {
-    const res = await request<{ success: boolean; token: string; user: any; message?: string }>(`${BASE}/api/login`, {
-      method: 'POST',
-      data: { username: account, password }
-    })
-    const backendUser = res.user
-    const user: User = {
-      id: backendUser.id,
-      name: backendUser.username,
-      avatar: 'https://picsum.photos/100/100',
-      role: backendUser.role === 'staff' ? UserRole.TECHNICIAN : UserRole.CUSTOMER,
-      phone: backendUser.phone,
-      rating: 5.0
-    }
-    setStore(DB_KEYS.AUTH_TOKEN, res.token)
-    setStore(DB_KEYS.CURRENT_USER, user)
-    return user
-  } catch (_) {
-    const users = getStore<User[]>(DB_KEYS.USERS, []) || []
-    const targetRole = role || UserRole.CUSTOMER
-    let user = users.find(u => u.role === targetRole)
-    if (!user) {
-      user = {
-        id: `user_${Date.now()}`,
-        name: targetRole === UserRole.CUSTOMER ? '本地客户' : '本地师傅',
-        avatar: `https://picsum.photos/seed/${Date.now()}/100/100`,
-        role: targetRole,
-        phone: '13000000000',
-        rating: 5.0,
-        isVerified: targetRole === UserRole.TECHNICIAN ? true : undefined
-      }
-      users.push(user)
-      setStore(DB_KEYS.USERS, users)
-    }
-    setStore(DB_KEYS.CURRENT_USER, user)
-    return user
+  const res = await request<{ success: boolean; token: string; user: any; message?: string }>(`${BASE}/api/login`, {
+    method: 'POST',
+    data: { username: account, password }
+  })
+  const backendUser = res.user
+  const backendRole: UserRole = backendUser?.role === 'staff' ? UserRole.TECHNICIAN : UserRole.CUSTOMER
+  if (role && role !== backendRole) {
+    throw new Error('所选身份与账号角色不匹配')
   }
+  const user: User = {
+    id: String(backendUser?.id ?? ''),
+    name: String(backendUser?.username ?? ''),
+    avatar: 'https://picsum.photos/100/100',
+    role: backendRole,
+    phone: String(backendUser?.phone ?? ''),
+    rating: 5.0
+  }
+  setStore(DB_KEYS.AUTH_TOKEN, res.token)
+  setStore(DB_KEYS.CURRENT_USER, user)
+  return user
 }
 
 // 员工接单
@@ -118,8 +103,8 @@ const mapBackendStatusToFrontend = (status: string): OrderStatus => {
 const mapBackendOrderToFrontend = (o: any): Order => {
   const now = Date.now()
   return {
-    id: o?.id ?? o?.order_no ?? `ord_${now}`,
-    customerId: o?.customer_id ?? '',
+    id: String(o?.id ?? o?.order_no ?? `ord_${now}`),
+    customerId: String(o?.user_id ?? o?.customer_id ?? ''),
     customerName: o?.customer_name ?? '',
     customerPhone: o?.phone ?? o?.customer_phone ?? '',
     category: o?.category ?? '其他',
@@ -199,11 +184,14 @@ export const createOrder = async (orderData: Partial<Order>): Promise<Order> => 
       image_url: orderData.images && orderData.images.length > 0 ? orderData.images[0] : '' // 后端目前只接收一个 image_url
     }
     const res = await request<{ success: boolean; message: string; order_no: string }>(`${BASE}/api/orders`, { method: 'POST', data: payload })
+    const list = await request<{ success: boolean; data: any[] }>(`${BASE}/api/orders/my?page=1&pageSize=20`, { method: 'GET' })
+    const hit = (list?.data || []).find((o: any) => o?.order_no === res.order_no) || (list?.data || [])[0]
+    if (hit) return mapBackendOrderToFrontend(hit)
     const now = Date.now()
-    const newOrder: Order = {
-      id: res.order_no, // 使用 order_no 作为 ID
-      customerId: '',
-      customerName: '',
+    return {
+      id: res.order_no,
+      customerId: orderData.customerId || '',
+      customerName: orderData.customerName || '',
       customerPhone: orderData.customerPhone || '',
       category: orderData.category || '其他',
       address: orderData.address || '',
@@ -214,7 +202,6 @@ export const createOrder = async (orderData: Partial<Order>): Promise<Order> => 
       updatedAt: now,
       images: orderData.images || []
     }
-    return newOrder
   }
   const orders: Order[] = getStore<Order[]>(DB_KEYS.ORDERS, []) || []
   const now = Date.now()
@@ -240,19 +227,19 @@ export const createOrder = async (orderData: Partial<Order>): Promise<Order> => 
 // 更新订单状态：接单/开始维修/完成/取消
 export const updateOrderStatus = async (orderId: string, status: OrderStatus, techId?: string, techName?: string): Promise<Order> => {
   if (isRemote) {
-    // 后端目前只实现了接单 (/take)，其他状态更新暂无明确接口
-    // 如果是接单，调用 takeOrder
     if (status === OrderStatus.ACCEPTED || status === OrderStatus.IN_PROGRESS) {
-        await takeOrder(orderId)
-        // 重新获取订单信息返回
-        // 由于后端没有返回更新后的订单，我们只能构造一个假的或者重新 fetch
-        // 这里简单构造返回
-        const order = await getOrderById(orderId)
-        order.status = status
-        return order
+      await takeOrder(orderId)
+      return await getOrderById(orderId)
     }
-    // 其他状态暂不支持或需要后端扩展
-    throw new Error('Remote update status not fully implemented')
+    if (status === OrderStatus.COMPLETED) {
+      await request(`${BASE}/api/orders/${encodeURIComponent(orderId)}/finish`, { method: 'POST', data: {} })
+      return await getOrderById(orderId)
+    }
+    if (status === OrderStatus.CANCELLED) {
+      await request(`${BASE}/api/orders/${encodeURIComponent(orderId)}/cancel`, { method: 'POST', data: {} })
+      return await getOrderById(orderId)
+    }
+    return await getOrderById(orderId)
   }
   const orders: Order[] = getStore<Order[]>(DB_KEYS.ORDERS, []) || []
   const index = orders.findIndex(o => o.id === orderId)
@@ -284,7 +271,12 @@ export const getOrderById = async (orderId: string): Promise<Order> => {
 // 修改订单信息：支持更新地址、描述、联系电话
 export const updateOrderInfo = async (orderId: string, patch: Partial<Pick<Order, 'address' | 'description' | 'customerPhone'>>): Promise<Order> => {
   if (isRemote) {
-    throw new Error('Remote update order info not implemented')
+    const payload: any = {}
+    if (patch.address !== undefined) payload.location = patch.address
+    if (patch.customerPhone !== undefined) payload.phone = patch.customerPhone
+    if (patch.description !== undefined) payload.description = patch.description
+    await request(`${BASE}/api/orders/${encodeURIComponent(orderId)}`, { method: 'PATCH', data: payload })
+    return await getOrderById(orderId)
   }
   const orders: Order[] = getStore<Order[]>(DB_KEYS.ORDERS, []) || []
   const index = orders.findIndex(o => o.id === orderId)
@@ -302,7 +294,14 @@ export const updateOrderInfo = async (orderId: string, patch: Partial<Pick<Order
 // 评价订单：支持双方互评
 export const rateOrder = async (orderId: string, rating: number, comment: string, type: 'CUSTOMER_TO_TECH' | 'TECH_TO_CUSTOMER'): Promise<Order> => {
   if (isRemote) {
-    throw new Error('Remote rate order not implemented')
+    if (type !== 'CUSTOMER_TO_TECH') {
+      throw new Error('后端暂不支持师傅评价用户')
+    }
+    await request(`${BASE}/api/orders/${encodeURIComponent(orderId)}/rate`, {
+      method: 'POST',
+      data: { rating, rating_comment: comment }
+    })
+    return await getOrderById(orderId)
   }
   const orders: Order[] = getStore<Order[]>(DB_KEYS.ORDERS, []) || []
   const index = orders.findIndex(o => o.id === orderId)
@@ -345,61 +344,32 @@ export const updateUserPhone = async (userId: string, phone: string): Promise<Us
 // 用户注册
 export const registerUser = async (payload: { account: string; password: string; name: string; phone: string }): Promise<User> => {
   if (isRemote) {
-    try {
-      const data = await request<{ success: boolean; message?: string; user?: any; token?: string }>(`${BASE}/api/register`, { 
-        method: 'POST', 
-        data: { 
-          username: payload.account, 
-          password: payload.password, 
-          name: payload.name, 
-          phone: payload.phone 
-        } 
-      })
-      let user: User | null = null
-      if (data.user) {
-        const backendUser = data.user
-        if (data.token) setStore(DB_KEYS.AUTH_TOKEN, data.token)
-        user = {
-          id: backendUser.id,
-          name: backendUser.username || backendUser.name || payload.name,
-          avatar: backendUser.avatar || 'https://picsum.photos/100/100',
-          role: backendUser.role === 'staff' ? UserRole.TECHNICIAN : UserRole.CUSTOMER,
-          phone: backendUser.phone || payload.phone,
-          rating: 5.0
-        }
-      } else {
-        const loginRes = await request<{ success: boolean; token: string; user: any }>(`${BASE}/api/login`, {
-          method: 'POST',
-          data: { username: payload.account, password: payload.password }
-        })
-        setStore(DB_KEYS.AUTH_TOKEN, loginRes.token)
-        const backendUser = loginRes.user
-        const user: User = {
-          id: backendUser.id,
-          name: backendUser.username || payload.name,
-          avatar: 'https://picsum.photos/100/100',
-          role: backendUser.role === 'staff' ? UserRole.TECHNICIAN : UserRole.CUSTOMER,
-          phone: backendUser.phone || payload.phone,
-          rating: 5.0
-        }
-        setStore(DB_KEYS.CURRENT_USER, user)
-        const users: User[] = getStore<User[]>(DB_KEYS.USERS, []) || []
-        if (!users.find(u => u.id === user.id)) {
-          users.push(user)
-          setStore(DB_KEYS.USERS, users)
-        }
-        return user
-      }
-      setStore(DB_KEYS.CURRENT_USER, user as User)
-      const users: User[] = getStore<User[]>(DB_KEYS.USERS, []) || []
-      if (!users.find(u => u.id === (user as User).id)) {
-        users.push(user as User)
-        setStore(DB_KEYS.USERS, users)
-      }
-      return user as User
-    } catch (_) {
-      // fallthrough to local branch
+    const data = await request<{ success: boolean; message?: string; user: any; token: string }>(`${BASE}/api/register`, { 
+      method: 'POST', 
+      data: { 
+        username: payload.account, 
+        password: payload.password, 
+        phone: payload.phone 
+      } 
+    })
+    if (!data?.success) throw new Error(data?.message || '注册失败')
+    const backendUser = data.user
+    setStore(DB_KEYS.AUTH_TOKEN, data.token)
+    const user: User = {
+      id: String(backendUser?.id ?? ''),
+      name: String(backendUser?.username ?? payload.name),
+      avatar: 'https://picsum.photos/100/100',
+      role: backendUser?.role === 'staff' ? UserRole.TECHNICIAN : UserRole.CUSTOMER,
+      phone: String(backendUser?.phone ?? payload.phone),
+      rating: 5.0
     }
+    setStore(DB_KEYS.CURRENT_USER, user)
+    const users: User[] = getStore<User[]>(DB_KEYS.USERS, []) || []
+    if (!users.find(u => u.id === user.id)) {
+      users.push(user)
+      setStore(DB_KEYS.USERS, users)
+    }
+    return user
   }
   const users: User[] = getStore<User[]>(DB_KEYS.USERS, []) || []
   const newUser: User = {

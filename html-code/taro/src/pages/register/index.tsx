@@ -32,19 +32,19 @@ const RegisterPage = () => {
       <Text style={{ fontSize: 20, fontWeight: 600 }}>注册</Text>
       <View style={{ marginTop: 16 }}>
         <Text>账号</Text>
-        <Input placeholder='请输入账号' value={account} onInput={(e) => setAccount(e.detail.value)} />
+        <Input placeholder='请输入账号' value={account} onInput={(e: any) => setAccount(e.detail.value)} />
       </View>
       <View style={{ marginTop: 16 }}>
         <Text>密码</Text>
-        <Input placeholder='请输入密码' password value={password} onInput={(e) => setPassword(e.detail.value)} />
+        <Input placeholder='请输入密码' password value={password} onInput={(e: any) => setPassword(e.detail.value)} />
       </View>
       <View style={{ marginTop: 16 }}>
         <Text>姓名</Text>
-        <Input placeholder='请输入姓名' value={name} onInput={(e) => setName(e.detail.value)} />
+        <Input placeholder='请输入姓名' value={name} onInput={(e: any) => setName(e.detail.value)} />
       </View>
       <View style={{ marginTop: 16 }}>
         <Text>手机号</Text>
-        <Input placeholder='请输入手机号' type='number' maxLength={11} value={phone} onInput={(e) => setPhone(e.detail.value)} />
+        <Input placeholder='请输入手机号' type='number' maxlength={11} value={phone} onInput={(e: any) => setPhone(e.detail.value)} />
       </View>
       <Button style={{ marginTop: 24 }} type='primary' onClick={handleRegister}>
         注册
