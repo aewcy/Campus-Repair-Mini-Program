@@ -14,6 +14,10 @@ const RegisterPage = () => {
       Taro.showToast({ title: '请填写完整信息', icon: 'none' })
       return
     }
+    if (password.length < 9) {
+      Taro.showToast({ title: '密码至少9位', icon: 'none' })
+      return
+    }
     if (!/^\d{11}$/.test(phone)) {
       Taro.showToast({ title: '请输入有效手机号', icon: 'none' })
       return
@@ -23,7 +27,8 @@ const RegisterPage = () => {
       Taro.showToast({ title: '注册成功', icon: 'success' })
       Taro.switchTab({ url: '/pages/home/index' })
     } catch (e) {
-      Taro.showToast({ title: '注册失败', icon: 'none' })
+      const message = e instanceof Error ? e.message : '注册失败'
+      Taro.showToast({ title: message, icon: 'none' })
     }
   }
 

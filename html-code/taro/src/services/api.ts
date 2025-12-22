@@ -18,17 +18,22 @@ const DB_KEYS = {
 }
 
 // 请求封装：统一设置头信息与错误处理
-const request = async <T>(url: string, options: Omit<Taro.request.Option<any, any>, 'url'> = {}): Promise<T> => {
+const request = async <T,>(url: string, options: Omit<Taro.request.Option<any, any>, 'url'> = {}): Promise<T> => {
+  const storedToken = (getStore<string>(DB_KEYS.AUTH_TOKEN, '') || '').trim()
+  const rawToken = storedToken || (API_TOKEN || '').trim()
+  const authHeader = rawToken
+    ? { Authorization: rawToken.startsWith('Bearer ') ? rawToken : `Bearer ${rawToken}` }
+    : {}
+
   const headers = {
     'Content-Type': 'application/json',
-    ...(API_TOKEN ? { Authorization: API_TOKEN } : {}),
-    ...(getStore<string>(DB_KEYS.AUTH_TOKEN, '') ? { Authorization: `Bearer ${getStore<string>(DB_KEYS.AUTH_TOKEN, '')}` } : {}),
-    ...(options.header || {})
+    ...(options.header || {}),
+    ...authHeader
   }
   const res = await Taro.request<T>({ url, ...options, header: headers })
   if (res.statusCode < 200 || res.statusCode >= 300) {
     const data: any = res.data as any
-    const message = data?.message || data?.error || `request failed: ${res.statusCode}`
+    const message = data?.message || data?.error || data?.errors?.[0]?.msg || `request failed: ${res.statusCode}`
     throw new Error(message)
   }
   return res.data as T
