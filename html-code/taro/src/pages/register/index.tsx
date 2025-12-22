@@ -1,13 +1,15 @@
 import React, { useState } from 'react'
-import { View, Text, Input, Button } from '@tarojs/components'
+import { View, Text, Input, Button, RadioGroup, Radio } from '@tarojs/components'
 import Taro from '@tarojs/taro'
 import { registerUser } from '../../services/api'
+import { UserRole } from '@/types'
 
 const RegisterPage = () => {
   const [account, setAccount] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
+  const [role, setRole] = useState<UserRole>(UserRole.CUSTOMER)
 
   const handleRegister = async () => {
     if (!account || !password || !name || !phone) {
@@ -23,7 +25,7 @@ const RegisterPage = () => {
       return
     }
     try {
-      await registerUser({ account, password, name, phone })
+      await registerUser({ account, password, name, phone, role })
       Taro.showToast({ title: '注册成功', icon: 'success' })
       Taro.switchTab({ url: '/pages/home/index' })
     } catch (e) {
@@ -35,6 +37,20 @@ const RegisterPage = () => {
   return (
     <View style={{ padding: 24 }}>
       <Text style={{ fontSize: 20, fontWeight: 600 }}>注册</Text>
+      <View style={{ marginTop: 20 }}>
+        <Text>选择身份</Text>
+        <RadioGroup
+          style={{ display: 'flex', marginTop: 8 }}
+          onChange={(e: any) => setRole(e.detail.value as UserRole)}
+        >
+          <View style={{ marginRight: 20 }}>
+            <Radio value={UserRole.CUSTOMER} checked={role === UserRole.CUSTOMER}>我是客户</Radio>
+          </View>
+          <View>
+            <Radio value={UserRole.TECHNICIAN} checked={role === UserRole.TECHNICIAN}>我是维修师傅</Radio>
+          </View>
+        </RadioGroup>
+      </View>
       <View style={{ marginTop: 16 }}>
         <Text>账号</Text>
         <Input placeholder='请输入账号' value={account} onInput={(e: any) => setAccount(e.detail.value)} />

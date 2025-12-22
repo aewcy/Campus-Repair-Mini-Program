@@ -347,14 +347,16 @@ export const updateUserPhone = async (userId: string, phone: string): Promise<Us
 }
 
 // 用户注册
-export const registerUser = async (payload: { account: string; password: string; name: string; phone: string }): Promise<User> => {
+export const registerUser = async (payload: { account: string; password: string; name: string; phone: string; role?: UserRole }): Promise<User> => {
   if (isRemote) {
+    const backendRole = payload.role === UserRole.TECHNICIAN ? 'staff' : 'user'
     const data = await request<{ success: boolean; message?: string; user: any; token: string }>(`${BASE}/api/register`, { 
       method: 'POST', 
       data: { 
         username: payload.account, 
         password: payload.password, 
-        phone: payload.phone 
+        phone: payload.phone,
+        role: backendRole
       } 
     })
     if (!data?.success) throw new Error(data?.message || '注册失败')
@@ -381,7 +383,7 @@ export const registerUser = async (payload: { account: string; password: string;
     id: `user_${Date.now()}`,
     name: payload.name,
     avatar: `https://picsum.photos/seed/${Date.now()}/100/100`,
-    role: UserRole.CUSTOMER,
+    role: payload.role || UserRole.CUSTOMER,
     phone: payload.phone,
     rating: 5.0
   }
