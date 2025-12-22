@@ -6,8 +6,21 @@ import Taro from '@tarojs/taro'
 // 组件：顶层应用，包裹各页面
 const App = (props: React.PropsWithChildren) => {
   useEffect(() => {
-    // 示例：获取系统信息（此处仅做占位）
     Taro.getSystemInfo().then(() => {})
+
+    const taroAny = Taro as any
+    const show = (msg: unknown) => {
+      const text = typeof msg === 'string' ? msg : (msg ? JSON.stringify(msg) : 'unknown error')
+      console.error('[app error]', text)
+      Taro.showToast({ title: `页面错误：${text}`.slice(0, 30), icon: 'none' })
+    }
+
+    if (typeof taroAny.onError === 'function') {
+      taroAny.onError((err: any) => show(err?.message || err))
+    }
+    if (typeof taroAny.onUnhandledRejection === 'function') {
+      taroAny.onUnhandledRejection((e: any) => show(e?.reason?.message || e?.reason || e))
+    }
   }, [])
   // 渲染：返回路由生成的子页面
   return props.children
