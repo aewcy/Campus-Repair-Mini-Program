@@ -79,8 +79,8 @@ html-code/taro/
 ```bash
 npm install
 ```
-
-## 本地启动（小程序端）
+## 启动小程序的操作
+### 本地启动（小程序端）
 
 在 `html-code/taro/` 目录执行：
 
@@ -88,35 +88,38 @@ npm install
 npm run dev:weapp
 ```
 
-说明：
+以下为说明：
 
 - 该命令会进入 watch 模式，持续编译到 `html-code/taro/dist/`
 - 命令行里出现 `Compiled successfully` 表示前端编译成功
 - 这不是后端启动日志；后端需要在 `backend_code/` 单独启动
 
-## 配置后端地址与联调
+### 远程后端启动(配置后端地址与联调)
+
+在 `html-code/taro/` 目录执行：
+
+```bash
+npm run dev:weapp
+```
+ 以下为说明
 
 小程序端请求后端的地址来自 `html-code/taro/config/index.js` 的 `defineConstants`：
 
 - `process.env.VITE_API_BASE_URL`：后端地址（本地默认 `http://127.0.0.1:3000`）
 - `process.env.VITE_API_TOKEN`：预留（通常留空，实际使用登录返回的 token）
 
-### 修改为远程后端
+上述修改ip就为远程后端
 
 编辑 `html-code/taro/config/index.js`：
 
 ```js
 defineConstants: {
-  'process.env.VITE_API_BASE_URL': JSON.stringify('http://你的后端IP或域名:3000'),
+  'process.env.VITE_API_BASE_URL': JSON.stringify('http://8.138.222.237'),
   'process.env.VITE_API_TOKEN': JSON.stringify('')
 }
 ```
 
-修改后需要重新编译：
 
-```bash
-npm run dev:weapp
-```
 
 ## 微信开发者工具导入与预览
 
