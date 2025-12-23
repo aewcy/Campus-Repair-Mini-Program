@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { View, Text, ScrollView } from '@tarojs/components'
 import Taro, { useDidShow } from '@tarojs/taro'
 import { getCurrentUser, getOrders } from '../../services/api'
-import { Order, User, OrderStatus } from '@/types'
+import { Order, User, OrderStatus, UserRole } from '@/types'
 
 const HomePage = () => {
   const [user, setUser] = useState<User | null>(null)
@@ -16,8 +16,13 @@ const HomePage = () => {
     setLoading(true)
     try {
       const list = await getOrders(u)
-      const active = list.filter(o => o.status !== OrderStatus.CANCELLED && o.status !== OrderStatus.COMPLETED)
-      setOrders(active)
+      if (u.role === UserRole.TECHNICIAN) {
+        const pending = list.filter(o => o.status === OrderStatus.PENDING)
+        setOrders(pending)
+      } else {
+        const active = list.filter(o => o.status !== OrderStatus.CANCELLED && o.status !== OrderStatus.COMPLETED)
+        setOrders(active)
+      }
     } catch (e) {
       Taro.showToast({ title: '订单加载失败', icon: 'none' })
     } finally {
@@ -39,7 +44,7 @@ const HomePage = () => {
       </Text>
       {user && (
         <View style={{ marginTop: 12 }}>
-          <Text>我的订单（{orders.length}）</Text>
+          <Text>{user.role === UserRole.TECHNICIAN ? `待接单（${orders.length}）` : `我的订单（${orders.length}）`}</Text>
         </View>
       )}
       {loading && <Text style={{ marginTop: 12 }}>加载中...</Text>}

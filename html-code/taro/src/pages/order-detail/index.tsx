@@ -33,6 +33,50 @@ const OrderDetailPage = () => {
     load()
   }, [])
 
+  const handleTake = async () => {
+    if (!order) return
+    const u = getCurrentUser()
+    if (!u) {
+      Taro.showToast({ title: '请先登录', icon: 'none' })
+      return
+    }
+    if (u.role !== UserRole.TECHNICIAN) {
+      Taro.showToast({ title: '仅维修师傅可接单', icon: 'none' })
+      return
+    }
+    try {
+      const o = await updateOrderStatus(order.id, OrderStatus.ACCEPTED)
+      setOrder(o)
+      Taro.showToast({ title: '接单成功', icon: 'success' })
+      Taro.switchTab({ url: '/pages/create-order/index' })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '接单失败'
+      Taro.showToast({ title: msg, icon: 'none' })
+    }
+  }
+
+  const handleFinish = async () => {
+    if (!order) return
+    const u = getCurrentUser()
+    if (!u) {
+      Taro.showToast({ title: '请先登录', icon: 'none' })
+      return
+    }
+    if (u.role !== UserRole.TECHNICIAN) {
+      Taro.showToast({ title: '仅维修师傅可完工', icon: 'none' })
+      return
+    }
+    try {
+      const o = await updateOrderStatus(order.id, OrderStatus.COMPLETED)
+      setOrder(o)
+      Taro.showToast({ title: '已完成', icon: 'success' })
+      Taro.switchTab({ url: '/pages/create-order/index' })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : '操作失败'
+      Taro.showToast({ title: msg, icon: 'none' })
+    }
+  }
+
   const handleCancel = async () => {
     if (!order) return
     const u = getCurrentUser()
@@ -86,6 +130,11 @@ const OrderDetailPage = () => {
     return <View style={{ padding: 16 }}><Text>加载中...</Text></View>
   }
   const isClosed = order.status === OrderStatus.CANCELLED || order.status === OrderStatus.COMPLETED
+  const u = getCurrentUser()
+  const isTech = u?.role === UserRole.TECHNICIAN
+  const canTake = isTech && order.status === OrderStatus.PENDING
+  const canFinish = isTech && order.status === OrderStatus.IN_PROGRESS
+  const isCustomer = u?.role === UserRole.CUSTOMER
 
   return (
     <View style={{ padding: 16 }}>
@@ -106,10 +155,20 @@ const OrderDetailPage = () => {
       </View>
       <View style={{ marginTop: 12 }}>
         <Text>问题描述</Text>
-        <Textarea placeholder='请描述故障情况' value={description} onInput={(e: any) => setDescription(e.detail.value)} />
+        <Textarea placeholder='请描述故障情况' value={description} onInput={(e: any) => setDescription(e.detail.value)} disabled={!isCustomer} />
       </View>
-      <Button style={{ marginTop: 16 }} type='primary' onClick={handleSave} disabled={saving || isClosed}>保存修改</Button>
-      <Button style={{ marginTop: 12 }} type='warn' onClick={handleCancel} disabled={isClosed}>取消订单</Button>
+      {isCustomer && (
+        <View>
+          <Button style={{ marginTop: 16 }} type='primary' onClick={handleSave} disabled={saving || isClosed}>保存修改</Button>
+          <Button style={{ marginTop: 12 }} type='warn' onClick={handleCancel} disabled={isClosed}>取消订单</Button>
+        </View>
+      )}
+      {isTech && (
+        <View>
+          <Button style={{ marginTop: 16 }} type='primary' onClick={handleTake} disabled={!canTake}>接单</Button>
+          <Button style={{ marginTop: 12 }} type='primary' onClick={handleFinish} disabled={!canFinish}>完成订单</Button>
+        </View>
+      )}
     </View>
   )
 }

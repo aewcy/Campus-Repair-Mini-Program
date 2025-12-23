@@ -17,6 +17,13 @@ const DB_KEYS = {
   AUTH_TOKEN: 'wefix_auth_token'
 }
 
+const syncTabBar = (role?: UserRole | null) => {
+  const text = role === UserRole.TECHNICIAN ? '订单' : '下单'
+  const fn: any = (Taro as any).setTabBarItem
+  if (typeof fn !== 'function') return
+  Promise.resolve(fn({ index: 1, text })).catch(() => {})
+}
+
 // 请求封装：统一设置头信息与错误处理
 const request = async <T,>(url: string, options: Omit<Taro.request.Option<any, any>, 'url'> = {}): Promise<T> => {
   const storedToken = (getStore<string>(DB_KEYS.AUTH_TOKEN, '') || '').trim()
@@ -60,6 +67,7 @@ export const loginWithPassword = async (account: string, password: string, role?
       setStore(DB_KEYS.USERS, users)
     }
     setStore(DB_KEYS.CURRENT_USER, user)
+    syncTabBar(user.role)
     return user
   }
   const res = await request<{ success: boolean; token: string; user: any; message?: string }>(`${BASE}/api/login`, {
@@ -81,6 +89,7 @@ export const loginWithPassword = async (account: string, password: string, role?
   }
   setStore(DB_KEYS.AUTH_TOKEN, res.token)
   setStore(DB_KEYS.CURRENT_USER, user)
+  syncTabBar(user.role)
   return user
 }
 
@@ -112,6 +121,7 @@ const mapBackendOrderToFrontend = (o: any): Order => {
     customerId: String(o?.user_id ?? o?.customer_id ?? ''),
     customerName: o?.customer_name ?? '',
     customerPhone: o?.phone ?? o?.customer_phone ?? '',
+    techId: o?.staff_id !== undefined && o?.staff_id !== null ? String(o.staff_id) : undefined,
     category: o?.category ?? '其他',
     address: o?.location ?? o?.address ?? '',
     description: o?.description ?? '',
@@ -145,6 +155,7 @@ export const loginUser = async (role: UserRole): Promise<User> => {
     setStore(DB_KEYS.USERS, users)
   }
   setStore(DB_KEYS.CURRENT_USER, user)
+  syncTabBar(user.role)
   return user
 }
 
@@ -152,11 +163,14 @@ export const loginUser = async (role: UserRole): Promise<User> => {
 export const logoutUser = async () => {
   removeStore(DB_KEYS.CURRENT_USER)
   removeStore(DB_KEYS.AUTH_TOKEN)
+  syncTabBar(null)
 }
 
 // 获取当前用户：若未登录返回 null
 export const getCurrentUser = (): User | null => {
-  return getStore<User>(DB_KEYS.CURRENT_USER, null)
+  const u = getStore<User>(DB_KEYS.CURRENT_USER, null)
+  syncTabBar(u?.role)
+  return u
 }
 
 // 获取订单列表：按角色返回不同视图
@@ -371,6 +385,7 @@ export const registerUser = async (payload: { account: string; password: string;
       rating: 5.0
     }
     setStore(DB_KEYS.CURRENT_USER, user)
+    syncTabBar(user.role)
     const users: User[] = getStore<User[]>(DB_KEYS.USERS, []) || []
     if (!users.find(u => u.id === user.id)) {
       users.push(user)
@@ -390,5 +405,6 @@ export const registerUser = async (payload: { account: string; password: string;
   users.push(newUser)
   setStore(DB_KEYS.USERS, users)
   setStore(DB_KEYS.CURRENT_USER, newUser)
+  syncTabBar(newUser.role)
   return newUser
 }
