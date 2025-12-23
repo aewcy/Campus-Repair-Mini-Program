@@ -19,7 +19,7 @@ const config = {
     '@': path.resolve(__dirname, '..', 'src')
   },
   defineConstants: {
-    'process.env.VITE_API_BASE_URL': JSON.stringify('http://127.0.0.1:3000'),
+    'process.env.VITE_API_BASE_URL': JSON.stringify('http://8.138.222.237'),
     'process.env.VITE_API_TOKEN': JSON.stringify('')
   },
   mini: {
