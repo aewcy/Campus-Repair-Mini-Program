@@ -82,7 +82,7 @@ npm install
 ## 启动小程序的操作
 ### 本地启动（小程序端）
 
-在 `html-code/taro/` 目录执行：
+在 `html-code/taro/` 目录执行(本机)：
 
 ```bash
 npm run dev:weapp
@@ -96,7 +96,7 @@ npm run dev:weapp
 
 ### 远程后端启动(配置后端地址与联调)
 
-在 `html-code/taro/` 目录执行：
+在 `html-code/taro/` 目录执行(本机)：
 
 ```bash
 npm run dev:weapp
