@@ -25,17 +25,15 @@ const TabBar: React.FC<TabBarProps> = ({ currentTab, onTabChange, role }) => {
         <span className="text-xs mt-1">首页</span>
       </button>
 
-      {isCustomer && (
-        <button 
-          onClick={() => onTabChange('create')}
-          className="flex flex-col items-center justify-center -mt-6"
-        >
-          <div className="bg-green-500 rounded-full p-3 shadow-lg text-white">
-            <PlusCircle size={32} />
-          </div>
-          <span className="text-xs mt-1 text-gray-500">下单</span>
-        </button>
-      )}
+      <button 
+        onClick={() => onTabChange('create')}
+        className="flex flex-col items-center justify-center -mt-6"
+      >
+        <div className="bg-green-500 rounded-full p-3 shadow-lg text-white">
+          {isCustomer ? <PlusCircle size={32} /> : <List size={32} />}
+        </div>
+        <span className="text-xs mt-1 text-gray-500">{isCustomer ? '下单' : '订单'}</span>
+      </button>
 
       <button 
         onClick={() => onTabChange('profile')}

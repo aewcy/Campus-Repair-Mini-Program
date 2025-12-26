@@ -2,7 +2,7 @@
 // 作用：管理登录/下单/订单详情/个人中心等视图状态，调用服务层获取数据
 import React, { useState, useEffect } from 'react';
 import { User, UserRole, Order, OrderStatus, ServiceType } from '../types';
-import { loginUser, logoutUser, getCurrentUser, getOrders, createOrder, updateOrderStatus, rateOrder } from './services/mockDatabase';
+import { loginUser, loginWithPassword, logoutUser, getCurrentUser, getOrders, createOrder, updateOrderStatus, rateOrder } from './services/mockDatabase';
 import TabBar from './components/TabBar';
 import OrderCard from './components/OrderCard';
 import StatusBadge from './components/StatusBadge';
@@ -29,11 +29,14 @@ type View = 'LOGIN' | 'HOME' | 'CREATE_ORDER' | 'ORDER_DETAIL' | 'PROFILE' | 'PR
 
 // 顶层组件：负责状态管理与路由切换
 const App = () => {
+  const isRemote = !!(import.meta.env?.VITE_API_BASE_URL || '');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [view, setView] = useState<View>('LOGIN');
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loginAccount, setLoginAccount] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   
   // 下单表单状态
   const [formData, setFormData] = useState({
@@ -54,8 +57,17 @@ const App = () => {
     const user = getCurrentUser();
     if (user) {
       setCurrentUser(user);
-      loadOrders(user);
-      setView('HOME');
+      (async () => {
+        try {
+          await loadOrders(user);
+          setView('HOME');
+        } catch (e: any) {
+          await logoutUser();
+          setCurrentUser(null);
+          setView('LOGIN');
+          alert(e?.message || '加载订单失败，请重新登录');
+        }
+      })();
     }
   }, []);
 
@@ -65,6 +77,10 @@ const App = () => {
     try {
       const data = await getOrders(user);
       setOrders(data);
+      return data;
+    } catch (e: any) {
+      alert(e?.message || '获取订单失败');
+      throw e;
     } finally {
       setIsLoading(false);
     }
@@ -74,10 +90,15 @@ const App = () => {
   const handleLogin = async (role: UserRole) => {
     setIsLoading(true);
     try {
-      const user = await loginUser(role);
+      const user = isRemote
+        ? await loginWithPassword(loginAccount.trim(), loginPassword, role)
+        : await loginUser(role);
       setCurrentUser(user);
       await loadOrders(user);
       setView('HOME');
+      setLoginPassword('');
+    } catch (e: any) {
+      alert(e?.message || '登录失败');
     } finally {
       setIsLoading(false);
     }
@@ -114,6 +135,8 @@ const App = () => {
          contactName: '',
          contactPhone: ''
       });
+    } catch (e: any) {
+      alert(e?.message || '下单失败');
     } finally {
       setIsLoading(false);
     }
@@ -131,6 +154,8 @@ const App = () => {
       setOrders(data);
       const next = data.find(o => o.id === selectedOrder.id) || null;
       setSelectedOrder(next);
+    } catch (e: any) {
+      alert(e?.message || '操作失败');
     } finally {
       setIsLoading(false);
     }
@@ -149,6 +174,8 @@ const App = () => {
       setSelectedOrder(next);
       setComment('');
       setRating(5);
+    } catch (e: any) {
+      alert(e?.message || '评价失败');
     } finally {
       setIsLoading(false);
     }
@@ -167,15 +194,43 @@ const App = () => {
         </div>
 
         <div className="space-y-4">
+          {isRemote && (
+            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-2">账号</label>
+                <input
+                  value={loginAccount}
+                  onChange={(e) => setLoginAccount(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400"
+                  placeholder="请输入用户名"
+                  autoComplete="username"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-2">密码</label>
+                <input
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-green-200 focus:border-green-400"
+                  placeholder="请输入密码"
+                  type="password"
+                  autoComplete="current-password"
+                />
+              </div>
+            </div>
+          )}
+
           <button 
             onClick={() => handleLogin(UserRole.CUSTOMER)}
-            className="w-full bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-semibold py-4 rounded-xl shadow-md transition-all flex items-center justify-center text-lg"
+            disabled={isRemote && (!loginAccount.trim() || !loginPassword)}
+            className={`w-full ${isRemote && (!loginAccount.trim() || !loginPassword) ? 'bg-gray-200 text-gray-400' : 'bg-green-500 hover:bg-green-600 active:bg-green-700 text-white'} font-semibold py-4 rounded-xl shadow-md transition-all flex items-center justify-center text-lg`}
           >
              <UserCheck className="mr-3" /> 客户登录 (发布需求)
           </button>
           <button 
             onClick={() => handleLogin(UserRole.TECHNICIAN)}
-            className="w-full bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-gray-700 font-semibold py-4 rounded-xl border border-gray-200 transition-all flex items-center justify-center text-lg"
+            disabled={isRemote && (!loginAccount.trim() || !loginPassword)}
+            className={`w-full ${isRemote && (!loginAccount.trim() || !loginPassword) ? 'bg-gray-100 text-gray-400 border-gray-100' : 'bg-gray-50 hover:bg-gray-100 active:bg-gray-200 text-gray-700 border border-gray-200'} font-semibold py-4 rounded-xl transition-all flex items-center justify-center text-lg`}
           >
              <Wrench className="mr-3" /> 师傅登录 (接单赚钱)
           </button>
@@ -212,8 +267,8 @@ const App = () => {
   // 头部标题：根据视图返回标题
   const getHeaderTitle = () => {
     switch (view) {
-      case 'HOME': return 'WeFix 维修';
-      case 'CREATE_ORDER': return '发布需求';
+      case 'HOME': return currentUser?.role === UserRole.TECHNICIAN ? '待接单' : 'WeFix 维修';
+      case 'CREATE_ORDER': return currentUser?.role === UserRole.TECHNICIAN ? '我的订单' : '发布需求';
       case 'PROFILE': return '个人中心';
       case 'ORDER_DETAIL': return '订单详情';
       default: return 'WeFix';
@@ -251,7 +306,12 @@ const App = () => {
             )}
             
             <div className="space-y-4">
-              {orders.length === 0 ? (
+              {(() => {
+                const list = currentUser?.role === UserRole.TECHNICIAN
+                  ? orders.filter(o => o.status === OrderStatus.PENDING)
+                  : orders;
+                return list;
+              })().length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 text-gray-400">
                   <div className="bg-gray-200 p-6 rounded-full mb-4">
                     <FileText size={40} className="text-gray-400" />
@@ -259,96 +319,125 @@ const App = () => {
                   <p className="text-sm">暂无订单</p>
                 </div>
               ) : (
-                orders.map(order => (
-                  <OrderCard 
-                    key={order.id} 
-                    order={order} 
-                    currentUserRole={currentUser?.role || UserRole.CUSTOMER}
-                    onClick={(o) => { setSelectedOrder(o); setView('ORDER_DETAIL'); }}
-                  />
-                ))
+                (() => {
+                  const list = currentUser?.role === UserRole.TECHNICIAN
+                    ? orders.filter(o => o.status === OrderStatus.PENDING)
+                    : orders;
+                  return list.map(order => (
+                    <OrderCard 
+                      key={order.id} 
+                      order={order} 
+                      currentUserRole={currentUser?.role || UserRole.CUSTOMER}
+                      onClick={(o) => { setSelectedOrder(o); setView('ORDER_DETAIL'); }}
+                    />
+                  ));
+                })()
               )}
             </div>
           </div>
         )}
 
         {view === 'CREATE_ORDER' && (
-          <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-gray-100">
-              <label className="block text-sm font-medium text-gray-900 mb-2">维修类别</label>
-              <div className="relative">
-                <select 
-                  className="w-full appearance-none p-3.5 bg-gray-50 rounded-xl text-base text-gray-900 border border-transparent focus:bg-white focus:border-green-500 focus:ring-0 transition-colors"
-                  value={formData.category}
-                  onChange={(e) => setFormData({...formData, category: e.target.value})}
-                >
-                  {REPAIR_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <div className="absolute right-3 top-3.5 pointer-events-none text-gray-500">
-                  <ChevronRight size={20} className="rotate-90" />
+          currentUser?.role === UserRole.TECHNICIAN ? (
+            <div className="space-y-4">
+              {orders.filter(o => o.techId === currentUser.id && o.status !== OrderStatus.PENDING).length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 text-gray-400">
+                  <div className="bg-gray-200 p-6 rounded-full mb-4">
+                    <FileText size={40} className="text-gray-400" />
+                  </div>
+                  <p className="text-sm">暂无已接订单</p>
+                </div>
+              ) : (
+                orders
+                  .filter(o => o.techId === currentUser.id && o.status !== OrderStatus.PENDING)
+                  .map(order => (
+                    <OrderCard 
+                      key={order.id} 
+                      order={order} 
+                      currentUserRole={currentUser.role}
+                      onClick={(o) => { setSelectedOrder(o); setView('ORDER_DETAIL'); }}
+                    />
+                  ))
+              )}
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-gray-100">
+                <label className="block text-sm font-medium text-gray-900 mb-2">维修类别</label>
+                <div className="relative">
+                  <select 
+                    className="w-full appearance-none p-3.5 bg-gray-50 rounded-xl text-base text-gray-900 border border-transparent focus:bg-white focus:border-green-500 focus:ring-0 transition-colors"
+                    value={formData.category}
+                    onChange={(e) => setFormData({...formData, category: e.target.value})}
+                  >
+                    {REPAIR_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <div className="absolute right-3 top-3.5 pointer-events-none text-gray-500">
+                    <ChevronRight size={20} className="rotate-90" />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-4 border-b border-gray-100">
-              <label className="block text-sm font-medium text-gray-900 mb-2">服务方式</label>
-              <div className="flex space-x-3">
-                {[ServiceType.HOME, ServiceType.SHOP].map(type => (
-                  <label key={type} className={`flex-1 flex items-center justify-center p-3 rounded-xl border transition-all cursor-pointer ${formData.serviceType === type ? 'bg-green-50 border-green-500 text-green-700' : 'bg-gray-50 border-transparent text-gray-600'}`}>
-                    <input 
-                      type="radio" 
-                      name="serviceType" 
-                      className="hidden"
-                      checked={formData.serviceType === type}
-                      onChange={() => setFormData({...formData, serviceType: type})}
-                    />
-                    <span className="text-sm font-medium">{type}</span>
-                  </label>
-                ))}
+              <div className="p-4 border-b border-gray-100">
+                <label className="block text-sm font-medium text-gray-900 mb-2">服务方式</label>
+                <div className="flex space-x-3">
+                  {[ServiceType.HOME, ServiceType.SHOP].map(type => (
+                    <label key={type} className={`flex-1 flex items-center justify-center p-3 rounded-xl border transition-all cursor-pointer ${formData.serviceType === type ? 'bg-green-50 border-green-500 text-green-700' : 'bg-gray-50 border-transparent text-gray-600'}`}>
+                      <input 
+                        type="radio" 
+                        name="serviceType" 
+                        className="hidden"
+                        checked={formData.serviceType === type}
+                        onChange={() => setFormData({...formData, serviceType: type})}
+                      />
+                      <span className="text-sm font-medium">{type}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-4 border-b border-gray-100">
+                <label className="block text-sm font-medium text-gray-900 mb-2">问题描述</label>
+                <textarea 
+                  className="w-full p-3 bg-gray-50 rounded-xl text-base border border-transparent focus:bg-white focus:border-green-500 focus:ring-0 min-h-[120px] transition-colors"
+                  placeholder="请详细描述故障情况，例如：屏幕碎裂、开机无反应..."
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                />
+              </div>
+
+              <div className="p-4 border-b border-gray-100">
+                <label className="block text-sm font-medium text-gray-900 mb-2">上传照片</label>
+                <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-400 bg-gray-50 active:bg-gray-100 transition-colors">
+                  <Camera size={24} className="mb-1" />
+                  <span className="text-[10px]">添加照片</span>
+                </div>
+              </div>
+
+              <div className="p-4">
+                <label className="block text-sm font-medium text-gray-900 mb-2">详细地址</label>
+                <div className="flex items-center bg-gray-50 rounded-xl p-3.5 border border-transparent focus-within:bg-white focus-within:border-green-500 transition-colors">
+                  <MapPin className="text-gray-400 mr-3" size={20} />
+                  <input 
+                    type="text" 
+                    className="bg-transparent w-full outline-none text-base text-gray-900 placeholder:text-gray-400"
+                    placeholder="请输入街道、小区、楼号"
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 pt-2">
+                <button 
+                  onClick={handleCreateOrder}
+                  className="w-full bg-green-500 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-green-200 active:scale-95 transition-transform text-base"
+                >
+                  立即发布
+                </button>
               </div>
             </div>
-
-            <div className="p-4 border-b border-gray-100">
-              <label className="block text-sm font-medium text-gray-900 mb-2">问题描述</label>
-              <textarea 
-                className="w-full p-3 bg-gray-50 rounded-xl text-base border border-transparent focus:bg-white focus:border-green-500 focus:ring-0 min-h-[120px] transition-colors"
-                placeholder="请详细描述故障情况，例如：屏幕碎裂、开机无反应..."
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-              />
-            </div>
-
-            <div className="p-4 border-b border-gray-100">
-              <label className="block text-sm font-medium text-gray-900 mb-2">上传照片</label>
-              <div className="w-24 h-24 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-gray-400 bg-gray-50 active:bg-gray-100 transition-colors">
-                <Camera size={24} className="mb-1" />
-                <span className="text-[10px]">添加照片</span>
-              </div>
-            </div>
-
-            <div className="p-4">
-              <label className="block text-sm font-medium text-gray-900 mb-2">详细地址</label>
-              <div className="flex items-center bg-gray-50 rounded-xl p-3.5 border border-transparent focus-within:bg-white focus-within:border-green-500 transition-colors">
-                 <MapPin className="text-gray-400 mr-3" size={20} />
-                 <input 
-                  type="text" 
-                  className="bg-transparent w-full outline-none text-base text-gray-900 placeholder:text-gray-400"
-                  placeholder="请输入街道、小区、楼号"
-                  value={formData.address}
-                  onChange={(e) => setFormData({...formData, address: e.target.value})}
-                 />
-              </div>
-            </div>
-
-            <div className="p-4 pt-2">
-               <button 
-                onClick={handleCreateOrder}
-                className="w-full bg-green-500 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-green-200 active:scale-95 transition-transform text-base"
-              >
-                立即发布
-              </button>
-            </div>
-          </div>
+          )
         )}
 
         {view === 'ORDER_DETAIL' && selectedOrder && (
@@ -408,19 +497,11 @@ const App = () => {
                {currentUser?.role === UserRole.TECHNICIAN && (
                  <>
                    {selectedOrder.status === OrderStatus.PENDING && (
-                     <button 
-                       onClick={() => handleStatusChange(OrderStatus.ACCEPTED)}
+                      <button 
+                       onClick={() => handleStatusChange(OrderStatus.IN_PROGRESS)}
                        className="w-full bg-green-500 text-white py-3.5 rounded-xl font-bold shadow-lg text-base"
                      >
                        立即接单
-                     </button>
-                   )}
-                   {selectedOrder.status === OrderStatus.ACCEPTED && selectedOrder.techId === currentUser.id && (
-                     <button 
-                       onClick={() => handleStatusChange(OrderStatus.IN_PROGRESS)}
-                       className="w-full bg-blue-500 text-white py-3.5 rounded-xl font-bold shadow-lg text-base"
-                     >
-                       开始维修
                      </button>
                    )}
                    {selectedOrder.status === OrderStatus.IN_PROGRESS && selectedOrder.techId === currentUser.id && (
